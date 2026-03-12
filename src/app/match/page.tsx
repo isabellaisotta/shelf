@@ -201,7 +201,7 @@ function MatchContent() {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground mb-2">
-              You & {friendName}
+              {friendName}
             </h1>
             <div className="flex gap-6">
               <div className="text-center">

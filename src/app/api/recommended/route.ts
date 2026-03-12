@@ -13,13 +13,14 @@ export async function GET() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  // Get friend recommendations sent to me
+  // Get friend recommendations sent to me (exclude declined)
   let friendItems: Record<string, unknown>[] = [];
   // Try with join first, fall back to plain query
   const { data: friendData, error: friendError } = await supabase
     .from("friend_recommendations")
     .select("*, from_user:profiles!friend_recommendations_from_user_id_fkey(username, display_name)")
     .eq("to_user_id", user.id)
+    .neq("status", "declined")
     .order("created_at", { ascending: false });
   if (!friendError && friendData) {
     friendItems = friendData;
@@ -29,6 +30,7 @@ export async function GET() {
       .from("friend_recommendations")
       .select("*")
       .eq("to_user_id", user.id)
+      .neq("status", "declined")
       .order("created_at", { ascending: false });
     if (plainData && plainData.length > 0) {
       const senderIds = [...new Set(plainData.map((r: Record<string, unknown>) => r.from_user_id as string))];
@@ -70,6 +72,7 @@ export async function GET() {
         notes: "",
         created_at: i.created_at,
         table: "friend_recommendations" as const,
+        status: (i.status as string) || "pending",
       };
     }),
   ].sort((a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime());
@@ -115,13 +118,16 @@ export async function PATCH(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
 
-  const { id, notes, table } = await req.json();
+  const { id, notes, table, status: newStatus } = await req.json();
   if (!id) return NextResponse.json({ error: "Item id required" }, { status: 400 });
 
   if (table === "friend_recommendations") {
+    const updateFields: Record<string, string> = {};
+    if (notes !== undefined) updateFields.notes = notes || "";
+    if (newStatus) updateFields.status = newStatus;
     await supabase
       .from("friend_recommendations")
-      .update({ notes: notes || "" })
+      .update(updateFields)
       .eq("id", id)
       .eq("to_user_id", user.id);
   } else {
