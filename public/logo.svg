@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 60" fill="none">
+  <!-- Book leaning like a / against the S -->
+  <g transform="translate(18, 4)">
+    <!-- Book spine and covers, tilted like a forward slash -->
+    <g transform="rotate(-20, 16, 26)">
+      <!-- Back cover -->
+      <rect x="6" y="2" width="22" height="48" rx="2" fill="#6366f1" opacity="0.7"/>
+      <!-- Spine -->
+      <rect x="4" y="2" width="4" height="48" rx="1" fill="#4f46e5"/>
+      <!-- Front cover -->
+      <rect x="8" y="0" width="22" height="48" rx="2" fill="#6366f1"/>
+      <!-- Pages (white edge visible between covers) -->
+      <rect x="7" y="4" width="2" height="40" fill="#e8e8f0" rx="1"/>
+      <!-- Cover detail lines -->
+      <line x1="14" y1="10" x2="24" y2="10" stroke="#a5b4fc" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="14" y1="14" x2="22" y2="14" stroke="#a5b4fc" stroke-width="1.2" stroke-linecap="round"/>
+      <line x1="14" y1="18" x2="20" y2="18" stroke="#a5b4fc" stroke-width="1" stroke-linecap="round"/>
+    </g>
+  </g>
+  <!-- "Shelf" text -->
+  <text x="52" y="44" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="42" font-weight="700" letter-spacing="-1">
+    <tspan fill="#111827">S</tspan><tspan fill="#111827">hel</tspan><tspan fill="#6366f1">f</tspan>
+  </text>
+</svg>
