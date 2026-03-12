@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
-import { createSession, SESSION_COOKIE } from "@/lib/auth";
-import bcrypt from "bcryptjs";
-import { v4 as uuid } from "uuid";
+import { createClient } from "@/lib/supabase-server";
 
 export async function POST(req: NextRequest) {
   const { username, email, password, displayName } = await req.json();
@@ -11,37 +8,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  if (username.length < 3 || username.length > 30) {
-    return NextResponse.json({ error: "Username must be 3-30 characters" }, { status: 400 });
-  }
+  const supabase = await createClient();
 
-  if (password.length < 6) {
-    return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
-  }
+  // Check if username is taken
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("username", username.toLowerCase())
+    .single();
 
-  const db = getDb();
-
-  const existing = db.prepare("SELECT id FROM users WHERE username = ? OR email = ?").get(username, email);
   if (existing) {
-    return NextResponse.json({ error: "Username or email already taken" }, { status: 409 });
+    return NextResponse.json({ error: "Username already taken" }, { status: 409 });
   }
 
-  const id = uuid();
-  const passwordHash = await bcrypt.hash(password, 10);
-
-  db.prepare(
-    "INSERT INTO users (id, username, email, password_hash, display_name) VALUES (?, ?, ?, ?, ?)"
-  ).run(id, username.toLowerCase(), email.toLowerCase(), passwordHash, displayName || username);
-
-  const token = createSession(id);
-
-  const res = NextResponse.json({ ok: true, user: { id, username: username.toLowerCase(), displayName: displayName || username } });
-  res.cookies.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
+  const { data, error } = await supabase.auth.signUp({
+    email: email.toLowerCase(),
+    password,
+    options: {
+      data: {
+        username: username.toLowerCase(),
+        display_name: displayName || username,
+      },
+    },
   });
 
-  return res;
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    user: { id: data.user?.id, username: username.toLowerCase() },
+  });
 }

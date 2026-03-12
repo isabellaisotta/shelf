@@ -1,23 +1,38 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
+import { createClient } from "@/lib/supabase-server";
 
 export async function GET() {
-  const user = await getCurrentUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
 
-  const db = getDb();
+  // Get all accepted friendships where I'm involved
+  const { data: friendships } = await supabase
+    .from("friendships")
+    .select("id, requester_id, addressee_id")
+    .eq("status", "accepted")
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
 
-  const friends = db
-    .prepare(`
-      SELECT u.id, u.username, u.display_name, f.id as friendship_id
-      FROM friendships f
-      JOIN users u ON (
-        CASE WHEN f.requester_id = ? THEN f.addressee_id ELSE f.requester_id END = u.id
-      )
-      WHERE (f.requester_id = ? OR f.addressee_id = ?) AND f.status = 'accepted'
-    `)
-    .all(user.id, user.id, user.id);
+  if (!friendships || friendships.length === 0) {
+    return NextResponse.json({ friends: [] });
+  }
+
+  // Get the other user's profile for each friendship
+  const friendIds = friendships.map((f) =>
+    f.requester_id === user.id ? f.addressee_id : f.requester_id
+  );
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, username, display_name")
+    .in("id", friendIds);
+
+  const friends = (profiles || []).map((p) => ({
+    ...p,
+    friendship_id: friendships.find(
+      (f) => f.requester_id === p.id || f.addressee_id === p.id
+    )?.id,
+  }));
 
   return NextResponse.json({ friends });
 }

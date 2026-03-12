@@ -1,16 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
-
-interface ItemRow {
-  id: string;
-  category: string;
-  title: string;
-  creator: string;
-  year: string;
-  cover_url: string;
-  rank: number;
-}
+import { createClient } from "@/lib/supabase-server";
 
 interface Match {
   title: string;
@@ -18,39 +7,42 @@ interface Match {
   coverUrl: string;
   myRank: number;
   theirRank: number;
-  closeness: number; // lower = closer match
+  closeness: number;
 }
 
 export async function GET(req: NextRequest) {
-  const user = await getCurrentUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
 
   const friendId = req.nextUrl.searchParams.get("friendId");
   if (!friendId) return NextResponse.json({ error: "friendId required" }, { status: 400 });
 
-  const db = getDb();
-
   // Verify friendship
-  const friendship = db
-    .prepare(
-      "SELECT id FROM friendships WHERE ((requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)) AND status = 'accepted'"
-    )
-    .get(user.id, friendId, friendId, user.id);
+  const { data: friendship } = await supabase
+    .from("friendships")
+    .select("id")
+    .eq("status", "accepted")
+    .or(`and(requester_id.eq.${user.id},addressee_id.eq.${friendId}),and(requester_id.eq.${friendId},addressee_id.eq.${user.id})`)
+    .single();
 
   if (!friendship) return NextResponse.json({ error: "Not friends" }, { status: 403 });
 
-  const myItems = db.prepare("SELECT * FROM items WHERE user_id = ? ORDER BY category, rank").all(user.id) as ItemRow[];
-  const theirItems = db.prepare("SELECT * FROM items WHERE user_id = ? ORDER BY category, rank").all(friendId) as ItemRow[];
+  const [myResult, theirResult, friendProfile] = await Promise.all([
+    supabase.from("items").select("*").eq("user_id", user.id).order("rank"),
+    supabase.from("items").select("*").eq("user_id", friendId).order("rank"),
+    supabase.from("profiles").select("username, display_name").eq("id", friendId).single(),
+  ]);
 
-  const friend = db.prepare("SELECT username, display_name FROM users WHERE id = ?").get(friendId) as { username: string; display_name: string };
+  const myItems = myResult.data || [];
+  const theirItems = theirResult.data || [];
+  const friend = friendProfile.data;
 
-  // Find matches (same title, case-insensitive)
+  // Find matches
   const matches: Match[] = [];
   for (const myItem of myItems) {
     const theirItem = theirItems.find(
-      (t) =>
-        t.title.toLowerCase() === myItem.title.toLowerCase() &&
-        t.category === myItem.category
+      (t) => t.title.toLowerCase() === myItem.title.toLowerCase() && t.category === myItem.category
     );
     if (theirItem) {
       matches.push({
@@ -59,15 +51,13 @@ export async function GET(req: NextRequest) {
         coverUrl: myItem.cover_url || theirItem.cover_url,
         myRank: myItem.rank,
         theirRank: theirItem.rank,
-        closeness: myItem.rank + theirItem.rank, // Lower = both ranked it highly
+        closeness: myItem.rank + theirItem.rank,
       });
     }
   }
 
-  // Sort by closeness (lowest combined rank = closest match)
   matches.sort((a, b) => a.closeness - b.closeness);
 
-  // Items unique to each person (for recommendations)
   const myTitles = new Set(myItems.map((i) => `${i.category}:${i.title.toLowerCase()}`));
   const theirTitles = new Set(theirItems.map((i) => `${i.category}:${i.title.toLowerCase()}`));
 
@@ -75,7 +65,7 @@ export async function GET(req: NextRequest) {
   const onlyTheirs = theirItems.filter((i) => !myTitles.has(`${i.category}:${i.title.toLowerCase()}`));
 
   return NextResponse.json({
-    friend: { id: friendId, username: friend.username, displayName: friend.display_name },
+    friend: { id: friendId, username: friend?.username, displayName: friend?.display_name },
     matches,
     onlyMine: onlyMine.slice(0, 20),
     onlyTheirs: onlyTheirs.slice(0, 20),

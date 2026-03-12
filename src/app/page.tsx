@@ -27,7 +27,7 @@ export default function Home() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <div className="text-center max-w-lg px-6">
         <h1 className="text-5xl font-bold text-gray-900 mb-2">
-          Taste<span className="text-indigo-600">Match</span>
+          Sh<span className="text-indigo-600">elf</span>
         </h1>
         <p className="text-xl text-gray-500 mb-8">
           Share your favorite books, films, and TV shows. See what you have in common with friends.

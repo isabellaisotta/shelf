@@ -12,7 +12,7 @@ export default function Nav() {
     <nav className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-6">
         <Link href="/profile" className="text-xl font-bold text-indigo-600 hover:text-indigo-700">
-          TasteMatch
+          Shelf
         </Link>
         <Link href="/profile" className="text-sm text-gray-600 hover:text-gray-900">
           My Profile

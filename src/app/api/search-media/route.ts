@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { createClient } from "@/lib/supabase-server";
 
 const TMDB_KEY = process.env.TMDB_API_KEY || "";
 
@@ -65,7 +65,8 @@ async function searchTV(query: string): Promise<MediaResult[]> {
 }
 
 export async function GET(req: NextRequest) {
-  const user = await getCurrentUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
 
   const query = req.nextUrl.searchParams.get("q") || "";

@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TasteMatch",
+  title: "Shelf",
   description: "Share your favorite books, films, and TV shows with friends",
 };
 
