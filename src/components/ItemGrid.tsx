@@ -160,18 +160,6 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
                 {addedItems?.has(item.id) ? "Added to Recommended" : "+ Add to Recommended"}
               </button>
             )}
-            {onRecommend && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRecommend(item);
-                }}
-                className="absolute bottom-14 right-2 text-xs font-medium px-2 py-1 rounded-lg z-10 transition-all bg-coral-muted text-coral hover:bg-coral hover:text-white opacity-0 group-hover:opacity-100"
-                title="Send to a friend"
-              >
-                Send to friend
-              </button>
-            )}
             {item.cover_url ? (
               <img
                 src={item.cover_url}
@@ -191,6 +179,17 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
               )}
               {item.year && (
                 <p className="text-xs text-muted-light">{item.year}</p>
+              )}
+              {onRecommend && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRecommend(item);
+                  }}
+                  className="mt-2 w-full text-xs font-medium px-2 py-1.5 rounded-lg transition-all bg-coral-muted text-coral hover:bg-coral hover:text-white opacity-0 group-hover:opacity-100"
+                >
+                  Send to friend
+                </button>
               )}
             </div>
           </div>

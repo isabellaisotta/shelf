@@ -4,7 +4,7 @@ import { useAuth } from "@/components/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, Suspense } from "react";
 import ItemGrid from "@/components/ItemGrid";
-import FriendPickerModal from "@/components/FriendPickerModal";
+import MediaSearch from "@/components/MediaSearch";
 
 interface Match {
   title: string;
@@ -119,7 +119,8 @@ function MatchContent() {
   }
 
   const [addedShelfItems, setAddedShelfItems] = useState<Set<string>>(new Set());
-  const [recommendItem, setRecommendItem] = useState<{ category: string; title: string; creator: string; cover_url?: string } | null>(null);
+  const [showSendRec, setShowSendRec] = useState(false);
+  const [sendCategory, setSendCategory] = useState<"book" | "film" | "tv">("book");
   const [toast, setToast] = useState<string | null>(null);
 
   async function addFromShelf(item: { id: string; title: string; category: string; creator: string }) {
@@ -143,30 +144,31 @@ function MatchContent() {
     }
   }
 
-  async function recommendToFriend(friendId: string, friendName: string) {
-    if (!recommendItem) return;
+  async function sendRecommendation(result: { title: string; creator: string; coverUrl: string }) {
+    if (!friendId) return;
+    const name = data?.friend.displayName || data?.friend.username || "friend";
     try {
       const res = await fetch("/api/recommended/friend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           toUserId: friendId,
-          category: recommendItem.category,
-          title: recommendItem.title,
-          creator: recommendItem.creator,
-          coverUrl: recommendItem.cover_url || "",
+          category: sendCategory,
+          title: result.title,
+          creator: result.creator,
+          coverUrl: result.coverUrl,
         }),
       });
       if (res.ok) {
-        setToast(`Sent to ${friendName}`);
+        setToast(`Sent "${result.title}" to ${name}`);
       } else if (res.status === 409) {
-        setToast(`Already sent to ${friendName}`);
+        setToast(`Already sent "${result.title}" to ${name}`);
       }
     } catch {
       setToast("Failed to send");
     }
-    setRecommendItem(null);
-    setTimeout(() => setToast(null), 2500);
+    setShowSendRec(false);
+    setTimeout(() => setToast(null), 3000);
   }
 
   async function generateRecommendation() {
@@ -196,18 +198,28 @@ function MatchContent() {
     <div className="max-w-5xl mx-auto px-6 py-8">
       {/* Header */}
       <div className="bg-surface rounded-xl border border-border p-6 mb-6">
-        <h1 className="text-2xl font-bold text-foreground mb-2">
-          You & {friendName}
-        </h1>
-        <div className="flex gap-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-coral">{data.stats.totalMatches}</div>
-            <div className="text-xs text-muted">matches</div>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground mb-2">
+              You & {friendName}
+            </h1>
+            <div className="flex gap-6">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-coral">{data.stats.totalMatches}</div>
+                <div className="text-xs text-muted">matches</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-coral">{data.stats.theirTotal}</div>
+                <div className="text-xs text-muted">their items</div>
+              </div>
+            </div>
           </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-coral">{data.stats.theirTotal}</div>
-            <div className="text-xs text-muted">their items</div>
-          </div>
+          <button
+            onClick={() => setShowSendRec(true)}
+            className="px-4 py-2 bg-coral-muted text-coral rounded-lg text-sm font-medium hover:bg-coral hover:text-white transition-colors"
+          >
+            Send recommendation to {friendName}
+          </button>
         </div>
       </div>
 
@@ -300,7 +312,7 @@ function MatchContent() {
             })}
           </div>
           {theirItems.filter((i) => i.category === shelfCategory).length > 0 ? (
-            <ItemGrid items={theirItems} category={shelfCategory} showComments viewingUserId={friendId!} onAdd={addFromShelf} addedItems={addedShelfItems} onRecommend={(item) => setRecommendItem(item)} />
+            <ItemGrid items={theirItems} category={shelfCategory} showComments viewingUserId={friendId!} onAdd={addFromShelf} addedItems={addedShelfItems} />
           ) : (
             <div className="text-center py-12 text-muted">
               <p>No {shelfCategory === "book" ? "books" : shelfCategory === "film" ? "films" : "TV shows"} yet.</p>
@@ -396,25 +408,17 @@ function MatchContent() {
                             </div>
                             <p className="text-sm text-muted mt-0.5">{pick.reason}</p>
                           </div>
-                          <div className="flex gap-2 flex-shrink-0">
-                            <button
-                              onClick={() => setRecommendItem({ category: pick.category, title: pick.title, creator: "" })}
-                              className="px-3 py-1 rounded-lg text-xs font-medium transition-colors bg-surface-hover text-muted hover:text-foreground"
-                            >
-                              Send to friend
-                            </button>
-                            <button
-                              onClick={() => addToRecommended(pick.title, pick.category, "")}
-                              disabled={added}
-                              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                                added
-                                  ? "bg-surface-hover text-muted-light"
-                                  : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
-                              }`}
-                            >
-                              {added ? "Added to Recommended" : "+ Add to Recommended"}
-                            </button>
-                          </div>
+                          <button
+                            onClick={() => addToRecommended(pick.title, pick.category, "")}
+                            disabled={added}
+                            className={`flex-shrink-0 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                              added
+                                ? "bg-surface-hover text-muted-light"
+                                : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
+                            }`}
+                          >
+                            {added ? "Added to Recommended" : "+ Add to Recommended"}
+                          </button>
                         </div>
                       );
                     })}
@@ -445,25 +449,17 @@ function MatchContent() {
                             </div>
                             <p className="text-sm text-muted mt-0.5">{pick.reason}</p>
                           </div>
-                          <div className="flex gap-2 flex-shrink-0">
-                            <button
-                              onClick={() => setRecommendItem({ category: pick.category, title: pick.title, creator: pick.creator || "" })}
-                              className="px-3 py-1 rounded-lg text-xs font-medium transition-colors bg-surface-hover text-muted hover:text-foreground"
-                            >
-                              Send to friend
-                            </button>
-                            <button
-                              onClick={() => addToRecommended(pick.title, pick.category, pick.creator || "")}
-                              disabled={added}
-                              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                                added
-                                  ? "bg-surface-hover text-muted-light"
-                                  : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
-                              }`}
-                            >
-                              {added ? "Added to Recommended" : "+ Add to Recommended"}
-                            </button>
-                          </div>
+                          <button
+                            onClick={() => addToRecommended(pick.title, pick.category, pick.creator || "")}
+                            disabled={added}
+                            className={`flex-shrink-0 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                              added
+                                ? "bg-surface-hover text-muted-light"
+                                : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
+                            }`}
+                          >
+                            {added ? "Added to Recommended" : "+ Add to Recommended"}
+                          </button>
                         </div>
                       );
                     })}
@@ -475,11 +471,42 @@ function MatchContent() {
         </div>
       )}
 
-      <FriendPickerModal
-        isOpen={!!recommendItem}
-        onClose={() => setRecommendItem(null)}
-        onSelect={recommendToFriend}
-      />
+      {showSendRec && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowSendRec(false)}>
+          <div className="bg-surface rounded-xl border border-border max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5">
+              <h3 className="font-semibold text-foreground mb-4">
+                Send recommendation to {friendName}
+              </h3>
+              <div className="flex gap-2 mb-4">
+                {([["book", "Books"], ["film", "Films"], ["tv", "TV Shows"]] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setSendCategory(key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      sendCategory === key
+                        ? "bg-coral text-white"
+                        : "bg-background text-muted border border-border hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <MediaSearch category={sendCategory} onSelect={sendRecommendation} />
+              <p className="text-xs text-muted-light mt-2">
+                Search and select to send to {friendName}
+              </p>
+              <button
+                onClick={() => setShowSendRec(false)}
+                className="mt-4 w-full py-2 text-sm text-muted hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-surface border border-coral/40 text-foreground text-sm px-4 py-2.5 rounded-xl shadow-lg z-50">
