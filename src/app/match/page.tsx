@@ -56,7 +56,7 @@ function MatchContent() {
   const [data, setData] = useState<MatchData | null>(null);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loadingRec, setLoadingRec] = useState(false);
-  const [activeTab, setActiveTab] = useState<"matches" | "theirs" | "mine">("matches");
+  const [activeTab, setActiveTab] = useState<"matches" | "shelf">("matches");
   const [theirItems, setTheirItems] = useState<Item[]>([]);
   const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
 
@@ -128,69 +128,73 @@ function MatchContent() {
             <div className="text-xs text-muted">matches</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-foreground">{data.stats.myTotal}</div>
-            <div className="text-xs text-muted">your items</div>
-          </div>
-          <div className="text-center">
             <div className="text-3xl font-bold text-foreground">{data.stats.theirTotal}</div>
             <div className="text-xs text-muted">their items</div>
           </div>
         </div>
       </div>
 
-      {/* Matches */}
-      {data.matches.length > 0 && (
-        <div className="bg-surface rounded-xl border border-border p-6 mb-6">
-          <h2 className="font-semibold text-foreground mb-4">Your matches</h2>
-          <div className="space-y-3">
-            {data.matches.map((m, i) => (
-              <div key={i} className="flex items-center gap-4 py-3 border-b border-border last:border-0">
-                <div className="text-lg font-bold text-coral w-8">#{i + 1}</div>
-                {m.coverUrl ? (
-                  <img src={m.coverUrl} alt="" className="w-10 h-14 object-cover rounded" />
-                ) : (
-                  <div className="w-10 h-14 bg-surface-hover rounded flex items-center justify-center">
-                    <CategoryLabel category={m.category} />
-                  </div>
-                )}
-                <div className="flex-1">
-                  <div className="font-medium text-foreground">{m.title}</div>
-                  <div className="text-sm text-muted">
-                    You: #{m.myRank} / {friend.displayName}: #{m.theirRank}
-                  </div>
-                </div>
-                {i === 0 && (
-                  <span className="px-3 py-1 bg-coral-muted text-coral text-xs font-medium rounded-full">
-                    Closest match
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Tabs for unique items */}
-      <div className="flex gap-2 mb-4">
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6">
         <button
-          onClick={() => setActiveTab("theirs")}
+          onClick={() => setActiveTab("matches")}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === "theirs" ? "bg-coral text-white" : "bg-surface text-muted border border-border hover:text-foreground"
+            activeTab === "matches" ? "bg-coral text-white" : "bg-surface text-muted border border-border hover:text-foreground"
           }`}
         >
-          {friend.displayName}&apos;s unique picks
+          Matches ({data.stats.totalMatches})
         </button>
         <button
-          onClick={() => setActiveTab("mine")}
+          onClick={() => setActiveTab("shelf")}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === "mine" ? "bg-coral text-white" : "bg-surface text-muted border border-border hover:text-foreground"
+            activeTab === "shelf" ? "bg-coral text-white" : "bg-surface text-muted border border-border hover:text-foreground"
           }`}
         >
-          Your unique picks
+          {friend.displayName || friend.username}&apos;s Shelf
         </button>
       </div>
 
-      {activeTab === "theirs" && (
+      {/* Matches view */}
+      {activeTab === "matches" && (
+        <>
+          {data.matches.length > 0 ? (
+            <div className="bg-surface rounded-xl border border-border p-6 mb-6">
+              <div className="space-y-3">
+                {data.matches.map((m, i) => (
+                  <div key={i} className="flex items-center gap-4 py-3 border-b border-border last:border-0">
+                    <div className="text-lg font-bold text-coral w-8">#{i + 1}</div>
+                    {m.coverUrl ? (
+                      <img src={m.coverUrl} alt="" className="w-10 h-14 object-cover rounded" />
+                    ) : (
+                      <div className="w-10 h-14 bg-surface-hover rounded flex items-center justify-center">
+                        <CategoryLabel category={m.category} />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <div className="font-medium text-foreground">{m.title}</div>
+                      <div className="text-sm text-muted">
+                        You: #{m.myRank} / {friend.displayName}: #{m.theirRank}
+                      </div>
+                    </div>
+                    {i === 0 && (
+                      <span className="px-3 py-1 bg-coral-muted text-coral text-xs font-medium rounded-full">
+                        Closest match
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted">
+              <p>No matches yet. Add more items to find common ground.</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Friend's shelf view */}
+      {activeTab === "shelf" && (
         <div className="mb-6">
           {(["book", "film", "tv"] as const).map((cat) => {
             const catItems = theirItems.filter((i) => i.category === cat);
@@ -198,28 +202,17 @@ function MatchContent() {
             return (
               <div key={cat} className="mb-6">
                 <h3 className="text-sm font-medium text-muted mb-3">
-                  {cat === "book" ? "Books" : cat === "film" ? "Films" : "TV Shows"}
+                  {cat === "book" ? "Books" : cat === "film" ? "Films" : "TV Shows"} ({catItems.length})
                 </h3>
                 <ItemGrid items={catItems} category={cat} showComments viewingUserId={friendId!} />
               </div>
             );
           })}
-        </div>
-      )}
-
-      {activeTab === "mine" && (
-        <div className="mb-6">
-          <p className="text-sm text-muted mb-4">
-            These are in your list but not in {friend.displayName}&apos;s.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {data.onlyMine.map((item) => (
-              <div key={item.id} className="inline-flex items-center gap-2 bg-surface rounded-lg border border-border px-3 py-2 text-sm text-foreground">
-                <CategoryLabel category={item.category} />
-                {item.title}
-              </div>
-            ))}
-          </div>
+          {theirItems.length === 0 && (
+            <div className="text-center py-12 text-muted">
+              <p>{friend.displayName || friend.username} hasn&apos;t added anything yet.</p>
+            </div>
+          )}
         </div>
       )}
 
