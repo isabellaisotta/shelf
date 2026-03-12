@@ -156,7 +156,7 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
                     : "bg-coral-muted text-coral hover:bg-coral hover:text-white opacity-0 group-hover:opacity-100"
                 }`}
               >
-                {addedItems?.has(item.id) ? "Added" : "+ Add"}
+                {addedItems?.has(item.id) ? "Added to Recommended" : "+ Add to Recommended"}
               </button>
             )}
             {item.cover_url ? (

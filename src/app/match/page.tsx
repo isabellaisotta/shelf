@@ -376,7 +376,7 @@ function MatchContent() {
                                 : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
                             }`}
                           >
-                            {added ? "Added" : "+ Add"}
+                            {added ? "Added to Recommended" : "+ Add to Recommended"}
                           </button>
                         </div>
                       );
@@ -417,7 +417,7 @@ function MatchContent() {
                                 : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
                             }`}
                           >
-                            {added ? "Added" : "+ Add"}
+                            {added ? "Added to Recommended" : "+ Add to Recommended"}
                           </button>
                         </div>
                       );
