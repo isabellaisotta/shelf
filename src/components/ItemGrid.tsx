@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 interface Item {
   id: string;
@@ -30,16 +30,48 @@ interface Props {
   viewingUserId?: string;
 }
 
-export default function ItemGrid({ items, category, editable = false, onDelete, showComments = false }: Props) {
+export default function ItemGrid({ items, category, editable = false, onDelete, onReorder, showComments = false }: Props) {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   const categoryLabel = category === "book" ? "Books" : category === "film" ? "Films" : "TV Shows";
-  const categoryEmoji = category === "book" ? "📚" : category === "film" ? "🎬" : "📺";
 
   const filtered = items.filter((i) => i.category === category).sort((a, b) => a.rank - b.rank);
+
+  function handleDragStart(index: number) {
+    dragItem.current = index;
+    setDragIndex(index);
+  }
+
+  function handleDragEnter(index: number) {
+    dragOverItem.current = index;
+  }
+
+  function handleDragEnd() {
+    if (dragItem.current === null || dragOverItem.current === null || dragItem.current === dragOverItem.current) {
+      setDragIndex(null);
+      return;
+    }
+
+    const reordered = [...filtered];
+    const [dragged] = reordered.splice(dragItem.current, 1);
+    reordered.splice(dragOverItem.current, 0, dragged);
+
+    const updates = reordered.map((item, i) => ({ id: item.id, rank: i + 1 }));
+
+    if (onReorder) {
+      onReorder(updates);
+    }
+
+    dragItem.current = null;
+    dragOverItem.current = null;
+    setDragIndex(null);
+  }
 
   async function loadComments(item: Item) {
     setSelectedItem(item);
@@ -71,8 +103,7 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
 
   if (filtered.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-400">
-        <span className="text-3xl">{categoryEmoji}</span>
+      <div className="text-center py-8 text-muted">
         <p className="mt-2">No {categoryLabel.toLowerCase()} yet</p>
       </div>
     );
@@ -81,13 +112,22 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
   return (
     <div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {filtered.map((item) => (
+        {filtered.map((item, index) => (
           <div
             key={item.id}
-            className="group relative bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+            draggable={editable && !!onReorder}
+            onDragStart={() => handleDragStart(index)}
+            onDragEnter={() => handleDragEnter(index)}
+            onDragEnd={handleDragEnd}
+            onDragOver={(e) => e.preventDefault()}
+            className={`group relative bg-surface rounded-xl border border-border overflow-hidden hover:border-coral/40 transition-all ${
+              editable && onReorder ? "cursor-grab active:cursor-grabbing" : ""
+            } ${dragIndex === index ? "opacity-40 scale-95" : ""} ${
+              showComments ? "cursor-pointer" : ""
+            }`}
             onClick={() => showComments && loadComments(item)}
           >
-            <div className="absolute top-2 left-2 bg-indigo-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center z-10">
+            <div className="absolute top-2 left-2 bg-coral text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center z-10">
               {item.rank}
             </div>
             {editable && onDelete && (
@@ -98,7 +138,7 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
                 }}
                 className="absolute top-2 right-2 bg-red-500 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
               >
-                ×
+                x
               </button>
             )}
             {item.cover_url ? (
@@ -106,19 +146,20 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
                 src={item.cover_url}
                 alt={item.title}
                 className="w-full h-48 object-cover"
+                draggable={false}
               />
             ) : (
-              <div className="w-full h-48 bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
-                <span className="text-4xl">{categoryEmoji}</span>
+              <div className="w-full h-48 bg-surface-hover flex items-center justify-center">
+                <span className="text-muted text-sm">{categoryLabel.slice(0, -1)}</span>
               </div>
             )}
             <div className="p-3">
-              <h3 className="font-medium text-sm text-gray-900 line-clamp-2">{item.title}</h3>
+              <h3 className="font-medium text-sm text-foreground line-clamp-2">{item.title}</h3>
               {item.creator && (
-                <p className="text-xs text-gray-500 mt-1">{item.creator}</p>
+                <p className="text-xs text-muted mt-1">{item.creator}</p>
               )}
               {item.year && (
-                <p className="text-xs text-gray-400">{item.year}</p>
+                <p className="text-xs text-muted-light">{item.year}</p>
               )}
             </div>
           </div>
@@ -127,43 +168,43 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
 
       {/* Comment modal */}
       {selectedItem && showComments && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedItem(null)}>
-          <div className="bg-white rounded-xl max-w-md w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setSelectedItem(null)}>
+          <div className="bg-surface rounded-xl border border-border max-w-md w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="p-6">
               <div className="flex items-start gap-4 mb-4">
                 {selectedItem.cover_url ? (
                   <img src={selectedItem.cover_url} alt="" className="w-16 h-24 object-cover rounded" />
                 ) : (
-                  <div className="w-16 h-24 bg-indigo-100 rounded flex items-center justify-center text-2xl">
-                    {categoryEmoji}
+                  <div className="w-16 h-24 bg-surface-hover rounded flex items-center justify-center text-sm text-muted">
+                    {categoryLabel.slice(0, -1)}
                   </div>
                 )}
                 <div>
-                  <h3 className="font-semibold text-gray-900">{selectedItem.title}</h3>
-                  {selectedItem.creator && <p className="text-sm text-gray-500">{selectedItem.creator}</p>}
-                  <p className="text-sm text-indigo-600 font-medium">Ranked #{selectedItem.rank}</p>
+                  <h3 className="font-semibold text-foreground">{selectedItem.title}</h3>
+                  {selectedItem.creator && <p className="text-sm text-muted">{selectedItem.creator}</p>}
+                  <p className="text-sm text-coral font-medium">Ranked #{selectedItem.rank}</p>
                 </div>
               </div>
 
-              <div className="border-t pt-4">
-                <h4 className="font-medium text-gray-700 mb-3">Comments</h4>
+              <div className="border-t border-border pt-4">
+                <h4 className="font-medium text-foreground mb-3">Comments</h4>
                 {loadingComments ? (
-                  <p className="text-gray-400 text-sm">Loading...</p>
+                  <p className="text-muted text-sm">Loading...</p>
                 ) : comments.length === 0 ? (
-                  <p className="text-gray-400 text-sm">No comments yet. Be the first!</p>
+                  <p className="text-muted text-sm">No comments yet. Be the first!</p>
                 ) : (
                   <div className="space-y-3 mb-4">
                     {comments.map((c) => (
-                      <div key={c.id} className="bg-gray-50 rounded-lg p-3">
+                      <div key={c.id} className="bg-background rounded-lg p-3">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-medium text-gray-700">
+                          <span className="text-sm font-medium text-foreground">
                             {c.display_name || c.username}
                           </span>
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-muted-light">
                             {new Date(c.created_at).toLocaleDateString()}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600">{c.body}</p>
+                        <p className="text-sm text-muted">{c.body}</p>
                       </div>
                     ))}
                   </div>
@@ -176,12 +217,12 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
                     onChange={(e) => setNewComment(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && postComment()}
                     placeholder="Write a comment..."
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="flex-1 px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-light focus:ring-2 focus:ring-coral focus:border-transparent"
                   />
                   <button
                     onClick={postComment}
                     disabled={!newComment.trim()}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50"
+                    className="px-4 py-2 bg-coral text-white rounded-lg text-sm hover:bg-coral-hover disabled:opacity-50"
                   >
                     Post
                   </button>
@@ -190,7 +231,7 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
 
               <button
                 onClick={() => setSelectedItem(null)}
-                className="mt-4 w-full py-2 text-sm text-gray-500 hover:text-gray-700"
+                className="mt-4 w-full py-2 text-sm text-muted hover:text-foreground"
               >
                 Close
               </button>

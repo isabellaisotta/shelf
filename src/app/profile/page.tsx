@@ -56,6 +56,20 @@ export default function ProfilePage() {
     await loadItems();
   }
 
+  async function reorderItems(updates: { id: string; rank: number }[]) {
+    setItems((prev) =>
+      prev.map((item) => {
+        const update = updates.find((u) => u.id === item.id);
+        return update ? { ...item, rank: update.rank } : item;
+      })
+    );
+    await fetch("/api/items", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: updates }),
+    });
+  }
+
   if (loading || !user) return null;
 
   const tabs: { key: Category; label: string }[] = [
@@ -137,6 +151,7 @@ export default function ProfilePage() {
         category={activeTab}
         editable
         onDelete={deleteItem}
+        onReorder={reorderItems}
       />
     </div>
   );

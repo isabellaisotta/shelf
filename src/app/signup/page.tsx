@@ -50,7 +50,7 @@ export default function SignupPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              placeholder="isabella"
+              placeholder="Choose a username"
               className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-light focus:ring-2 focus:ring-coral focus:border-transparent"
             />
           </div>
