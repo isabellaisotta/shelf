@@ -37,46 +37,46 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Log in</h1>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="bg-surface rounded-xl border border-border p-8 w-full max-w-md">
+        <h1 className="text-2xl font-bold text-foreground mb-6">Log in</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Username or email</label>
+            <label className="block text-sm font-medium text-muted mb-1">Email</label>
             <input
               type="text"
               value={login}
               onChange={(e) => setLogin(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-light focus:ring-2 focus:ring-coral focus:border-transparent"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-muted mb-1">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-light focus:ring-2 focus:ring-coral focus:border-transparent"
             />
           </div>
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && <p className="text-coral text-sm">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            className="w-full py-3 bg-coral text-white rounded-lg font-medium hover:bg-coral-hover disabled:opacity-50 transition-colors"
           >
             {loading ? "Logging in..." : "Log in"}
           </button>
         </form>
 
-        <p className="mt-4 text-sm text-gray-500 text-center">
+        <p className="mt-4 text-sm text-muted text-center">
           No account?{" "}
-          <Link href="/signup" className="text-indigo-600 hover:underline">
+          <Link href="/signup" className="text-coral hover:underline">
             Sign up
           </Link>
         </p>

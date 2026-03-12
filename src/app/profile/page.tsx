@@ -58,10 +58,10 @@ export default function ProfilePage() {
 
   if (loading || !user) return null;
 
-  const tabs: { key: Category; label: string; emoji: string }[] = [
-    { key: "book", label: "Books", emoji: "📚" },
-    { key: "film", label: "Films", emoji: "🎬" },
-    { key: "tv", label: "TV Shows", emoji: "📺" },
+  const tabs: { key: Category; label: string }[] = [
+    { key: "book", label: "Books" },
+    { key: "film", label: "Films" },
+    { key: "tv", label: "TV Shows" },
   ];
 
   const counts = {
@@ -73,19 +73,18 @@ export default function ProfilePage() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
       {/* Profile header */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="bg-surface rounded-xl border border-border p-6 mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {user.display_name || user.username}
+            <h1 className="text-2xl font-bold text-foreground">
+              @{user.username}
             </h1>
-            <p className="text-gray-500">@{user.username}</p>
           </div>
           <div className="flex gap-6 text-center">
             {tabs.map((t) => (
               <div key={t.key}>
-                <div className="text-2xl font-bold text-gray-900">{counts[t.key]}</div>
-                <div className="text-xs text-gray-500">{t.label}</div>
+                <div className="text-2xl font-bold text-foreground">{counts[t.key]}</div>
+                <div className="text-xs text-muted">{t.label}</div>
               </div>
             ))}
           </div>
@@ -100,11 +99,11 @@ export default function ProfilePage() {
             onClick={() => { setActiveTab(t.key); setAddMode(false); }}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === t.key
-                ? "bg-indigo-600 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                ? "bg-coral text-white"
+                : "bg-surface text-muted hover:text-foreground border border-border"
             }`}
           >
-            {t.emoji} {t.label}
+            {t.label}
           </button>
         ))}
 
@@ -114,8 +113,8 @@ export default function ProfilePage() {
           onClick={() => setAddMode(!addMode)}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             addMode
-              ? "bg-gray-200 text-gray-700"
-              : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+              ? "bg-surface text-muted border border-border"
+              : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
           }`}
         >
           {addMode ? "Done" : "+ Add"}
@@ -124,9 +123,9 @@ export default function ProfilePage() {
 
       {/* Add item */}
       {addMode && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+        <div className="bg-surface rounded-xl border border-border p-4 mb-6">
           <MediaSearch category={activeTab} onSelect={addItem} />
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="text-xs text-muted-light mt-2">
             Search and select to add to your {activeTab === "tv" ? "TV shows" : activeTab + "s"}
           </p>
         </div>
