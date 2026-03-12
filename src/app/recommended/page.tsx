@@ -3,6 +3,7 @@
 import { useAuth } from "@/components/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
+import MediaSearch from "@/components/MediaSearch";
 
 interface RecommendedItem {
   id: string;
@@ -10,7 +11,9 @@ interface RecommendedItem {
   title: string;
   creator: string;
   source: string;
+  source_type: "self" | "ai" | "friend";
   created_at: string;
+  table: "recommended" | "friend_recommendations";
 }
 
 type Category = "all" | "book" | "film" | "tv";
@@ -20,6 +23,8 @@ export default function RecommendedPage() {
   const router = useRouter();
   const [items, setItems] = useState<RecommendedItem[]>([]);
   const [activeTab, setActiveTab] = useState<Category>("all");
+  const [addMode, setAddMode] = useState(false);
+  const [addCategory, setAddCategory] = useState<"book" | "film" | "tv">("book");
 
   const loadItems = useCallback(async () => {
     const res = await fetch("/api/recommended");
@@ -32,11 +37,27 @@ export default function RecommendedPage() {
     if (user) loadItems();
   }, [user, loading, router, loadItems]);
 
-  async function removeItem(id: string) {
+  async function addItem(result: { title: string; creator: string; year: string; coverUrl: string; externalId: string }) {
+    const res = await fetch("/api/recommended", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        category: addCategory,
+        title: result.title,
+        creator: result.creator,
+        source: "Added by you",
+      }),
+    });
+    if (res.ok) {
+      await loadItems();
+    }
+  }
+
+  async function removeItem(id: string, table: string) {
     await fetch("/api/recommended", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, table }),
     });
     setItems((prev) => prev.filter((i) => i.id !== id));
   }
@@ -59,6 +80,24 @@ export default function RecommendedPage() {
     tv: items.filter((i) => i.category === "tv").length,
   };
 
+  const addCategoryTabs: { key: "book" | "film" | "tv"; label: string }[] = [
+    { key: "book", label: "Books" },
+    { key: "film", label: "Films" },
+    { key: "tv", label: "TV Shows" },
+  ];
+
+  function sourceLabel(item: RecommendedItem) {
+    if (item.source_type === "friend") return item.source;
+    if (item.source_type === "ai") return item.source;
+    return "Added by you";
+  }
+
+  function sourceColor(item: RecommendedItem) {
+    if (item.source_type === "friend") return "text-coral";
+    if (item.source_type === "ai") return "text-muted-light";
+    return "text-muted-light";
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
       {/* Header */}
@@ -66,12 +105,12 @@ export default function RecommendedPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Recommended</h1>
-            <p className="text-sm text-muted mt-1">AI picks from your taste comparisons</p>
+            <p className="text-sm text-muted mt-1">Things to watch, read, and binge</p>
           </div>
           <div className="flex gap-6 text-center">
             {tabs.slice(1).map((t) => (
               <div key={t.key}>
-                <div className="text-2xl font-bold text-foreground">{counts[t.key]}</div>
+                <div className="text-2xl font-bold text-coral">{counts[t.key]}</div>
                 <div className="text-xs text-muted">{t.label}</div>
               </div>
             ))}
@@ -79,7 +118,7 @@ export default function RecommendedPage() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs + Add button */}
       <div className="flex items-center gap-2 mb-6">
         {tabs.map((t) => (
           <button
@@ -94,14 +133,50 @@ export default function RecommendedPage() {
             {t.label} ({counts[t.key]})
           </button>
         ))}
+        <div className="flex-1" />
+        <button
+          onClick={() => setAddMode(!addMode)}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            addMode
+              ? "bg-surface text-muted border border-border"
+              : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
+          }`}
+        >
+          {addMode ? "Done" : "+ Add"}
+        </button>
       </div>
+
+      {/* Add item */}
+      {addMode && (
+        <div className="bg-surface rounded-xl border border-border p-4 mb-6">
+          <div className="flex gap-2 mb-3">
+            {addCategoryTabs.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setAddCategory(t.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  addCategory === t.key
+                    ? "bg-coral text-white"
+                    : "bg-background text-muted border border-border hover:text-foreground"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <MediaSearch category={addCategory} onSelect={addItem} />
+          <p className="text-xs text-muted-light mt-2">
+            Search and select to add to your recommendations
+          </p>
+        </div>
+      )}
 
       {/* Items */}
       {filtered.length === 0 ? (
         <div className="text-center py-16 text-muted">
           <p className="text-lg mb-2">No recommendations yet</p>
           <p className="text-sm text-muted-light">
-            Compare tastes with a friend and save AI recommendations here
+            Add your own, get AI picks from taste comparisons, or have friends recommend things to you
           </p>
         </div>
       ) : (
@@ -122,16 +197,12 @@ export default function RecommendedPage() {
                   {item.creator && (
                     <span className="text-sm text-muted">{item.creator}</span>
                   )}
-                  {item.source && (
-                    <>
-                      {item.creator && <span className="text-muted-light">·</span>}
-                      <span className="text-xs text-muted-light">{item.source}</span>
-                    </>
-                  )}
+                  {item.creator && <span className="text-muted-light">·</span>}
+                  <span className={`text-xs ${sourceColor(item)}`}>{sourceLabel(item)}</span>
                 </div>
               </div>
               <button
-                onClick={() => removeItem(item.id)}
+                onClick={() => removeItem(item.id, item.table)}
                 className="px-3 py-1.5 text-xs text-muted-light hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
               >
                 Remove
