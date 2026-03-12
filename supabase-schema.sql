@@ -56,6 +56,20 @@ create table public.recommended (
   unique(user_id, category, title)
 );
 
+-- Friend recommendations (sent between users)
+create table public.friend_recommendations (
+  id uuid default gen_random_uuid() primary key,
+  from_user_id uuid references public.profiles(id) on delete cascade not null,
+  to_user_id uuid references public.profiles(id) on delete cascade not null,
+  category text not null check (category in ('book', 'film', 'tv')),
+  title text not null,
+  creator text default '',
+  cover_url text default '',
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'declined')),
+  created_at timestamptz default now(),
+  unique(from_user_id, to_user_id, category, title)
+);
+
 -- Saved AI recommendations per friend pair
 create table public.match_recommendations (
   id uuid default gen_random_uuid() primary key,
@@ -73,6 +87,8 @@ create index idx_items_user on public.items(user_id);
 create index idx_items_category on public.items(user_id, category);
 create index idx_friendships_addressee on public.friendships(addressee_id);
 create index idx_comments_item on public.comments(item_id);
+create index idx_friend_recs_to on public.friend_recommendations(to_user_id);
+create index idx_friend_recs_from on public.friend_recommendations(from_user_id);
 
 -- Row Level Security
 alter table public.profiles enable row level security;
@@ -80,6 +96,7 @@ alter table public.items enable row level security;
 alter table public.friendships enable row level security;
 alter table public.recommended enable row level security;
 alter table public.match_recommendations enable row level security;
+alter table public.friend_recommendations enable row level security;
 alter table public.comments enable row level security;
 
 -- Profiles: anyone can read, only own profile can update
@@ -123,6 +140,18 @@ create policy "Users can insert own match recs" on public.match_recommendations
   for insert with check (auth.uid() = user_id);
 create policy "Users can update own match recs" on public.match_recommendations
   for update using (auth.uid() = user_id);
+
+-- Friend recommendations: sender can insert/view, recipient can view/update/delete
+create policy "Users can send recommendations" on public.friend_recommendations
+  for insert with check (auth.uid() = from_user_id);
+create policy "Sender can view sent recs" on public.friend_recommendations
+  for select using (auth.uid() = from_user_id);
+create policy "Recipient can view received recs" on public.friend_recommendations
+  for select using (auth.uid() = to_user_id);
+create policy "Recipient can update rec status" on public.friend_recommendations
+  for update using (auth.uid() = to_user_id);
+create policy "Recipient can delete recs" on public.friend_recommendations
+  for delete using (auth.uid() = to_user_id);
 
 -- Comments: anyone can read (on items they can see), logged-in users can post
 create policy "Comments are viewable by everyone" on public.comments

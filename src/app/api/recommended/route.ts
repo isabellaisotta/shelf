@@ -115,14 +115,22 @@ export async function PATCH(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
 
-  const { id, notes } = await req.json();
+  const { id, notes, table } = await req.json();
   if (!id) return NextResponse.json({ error: "Item id required" }, { status: 400 });
 
-  await supabase
-    .from("recommended")
-    .update({ notes: notes || "" })
-    .eq("id", id)
-    .eq("user_id", user.id);
+  if (table === "friend_recommendations") {
+    await supabase
+      .from("friend_recommendations")
+      .update({ notes: notes || "" })
+      .eq("id", id)
+      .eq("to_user_id", user.id);
+  } else {
+    await supabase
+      .from("recommended")
+      .update({ notes: notes || "" })
+      .eq("id", id)
+      .eq("user_id", user.id);
+  }
 
   return NextResponse.json({ ok: true });
 }

@@ -94,11 +94,8 @@ export default function RecommendedPage() {
     return "Added by you";
   }
 
-  function sourceColor(item: RecommendedItem) {
-    if (item.source_type === "friend") return "text-coral";
-    if (item.source_type === "from-shelf") return "text-coral";
-    if (item.source_type === "ai") return "text-muted-light";
-    return "text-muted-light";
+  function sourceColor() {
+    return "text-coral";
   }
 
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
@@ -110,10 +107,11 @@ export default function RecommendedPage() {
   }
 
   async function saveNotes(id: string) {
+    const item = items.find((i) => i.id === id);
     await fetch("/api/recommended", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, notes: notesValue }),
+      body: JSON.stringify({ id, notes: notesValue, table: item?.table }),
     });
     setItems((prev) => prev.map((i) => i.id === id ? { ...i, notes: notesValue } : i));
     setEditingNotes(null);
@@ -220,7 +218,53 @@ export default function RecommendedPage() {
                       <span className="text-sm text-muted">{item.creator}</span>
                     )}
                     {item.creator && <span className="text-muted-light">·</span>}
-                    <span className={`text-xs ${sourceColor(item)}`}>{sourceLabel(item)}</span>
+                    <span className={`text-xs ${sourceColor()}`}>{sourceLabel(item)}</span>
+                    {editingNotes === item.id ? (
+                      <>
+                        <span className="text-muted-light">·</span>
+                        <input
+                          type="text"
+                          value={notesValue}
+                          onChange={(e) => setNotesValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveNotes(item.id);
+                            if (e.key === "Escape") setEditingNotes(null);
+                          }}
+                          placeholder="Add a note..."
+                          autoFocus
+                          className="text-sm px-2 py-0.5 bg-background border border-border rounded text-foreground placeholder:text-muted-light focus:ring-1 focus:ring-coral focus:border-transparent"
+                        />
+                        <button
+                          onClick={() => saveNotes(item.id)}
+                          className="text-xs text-coral hover:text-coral-hover font-medium"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingNotes(null)}
+                          className="text-xs text-muted-light hover:text-foreground"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : item.notes ? (
+                      <>
+                        <span className="text-muted-light">·</span>
+                        <span
+                          onClick={() => startEditNotes(item)}
+                          className="text-xs text-muted cursor-pointer hover:text-foreground transition-colors"
+                        >
+                          {item.notes}
+                        </span>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => startEditNotes(item)}
+                        className="text-xs text-muted-light hover:text-muted transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        · + note
+                      </button>
+                    )}
                   </div>
                 </div>
                 <button
@@ -230,50 +274,6 @@ export default function RecommendedPage() {
                   Remove
                 </button>
               </div>
-              {/* Notes */}
-              {item.table === "recommended" && (
-                <div className="mt-2 ml-14">
-                  {editingNotes === item.id ? (
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={notesValue}
-                        onChange={(e) => setNotesValue(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && saveNotes(item.id)}
-                        placeholder="Add a note..."
-                        autoFocus
-                        className="flex-1 px-3 py-1.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-light focus:ring-2 focus:ring-coral focus:border-transparent"
-                      />
-                      <button
-                        onClick={() => saveNotes(item.id)}
-                        className="px-3 py-1.5 bg-coral text-white rounded-lg text-xs font-medium hover:bg-coral-hover"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setEditingNotes(null)}
-                        className="px-3 py-1.5 text-muted-light hover:text-foreground rounded-lg text-xs"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : item.notes ? (
-                    <p
-                      onClick={() => startEditNotes(item)}
-                      className="text-sm text-muted cursor-pointer hover:text-foreground transition-colors"
-                    >
-                      {item.notes}
-                    </p>
-                  ) : (
-                    <button
-                      onClick={() => startEditNotes(item)}
-                      className="text-xs text-muted-light hover:text-muted transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      + Add note
-                    </button>
-                  )}
-                </div>
-              )}
             </div>
           ))}
         </div>
