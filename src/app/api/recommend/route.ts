@@ -9,6 +9,28 @@ export async function GET(req: NextRequest) {
   const friendId = req.nextUrl.searchParams.get("friendId");
   if (!friendId) return NextResponse.json({ error: "friendId required" }, { status: 400 });
 
+  const { data: saved } = await supabase
+    .from("match_recommendations")
+    .select("recommendation, created_at")
+    .eq("user_id", user.id)
+    .eq("friend_id", friendId)
+    .single();
+
+  if (saved) {
+    return NextResponse.json({ recommendation: saved.recommendation, created_at: saved.created_at });
+  }
+
+  return NextResponse.json({ recommendation: null });
+}
+
+export async function POST(req: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
+
+  const { friendId } = await req.json();
+  if (!friendId) return NextResponse.json({ error: "friendId required" }, { status: 400 });
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: "AI recommendations not configured" }, { status: 500 });
@@ -72,12 +94,24 @@ Return 3-5 items in from_their_list and 3-5 in new_picks. Use their actual names
     const raw = data.content?.[0]?.text || "";
     const text = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
 
+    let recommendation;
     try {
-      const parsed = JSON.parse(text);
-      return NextResponse.json({ recommendation: parsed });
+      recommendation = JSON.parse(text);
     } catch {
-      return NextResponse.json({ recommendation: { vibe: text, common_ground: [], differences: [], from_their_list: [], new_picks: [] } });
+      recommendation = { vibe: text, common_ground: [], differences: [], from_their_list: [], new_picks: [] };
     }
+
+    // Save to database (upsert)
+    await supabase
+      .from("match_recommendations")
+      .upsert({
+        user_id: user.id,
+        friend_id: friendId,
+        recommendation,
+        created_at: new Date().toISOString(),
+      }, { onConflict: "user_id,friend_id" });
+
+    return NextResponse.json({ recommendation, created_at: new Date().toISOString() });
   } catch (err) {
     return NextResponse.json({
       error: `Could not generate recommendations: ${err instanceof Error ? err.message : "Unknown error"}`,

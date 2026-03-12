@@ -55,8 +55,19 @@ create table public.recommended (
   unique(user_id, category, title)
 );
 
+-- Saved AI recommendations per friend pair
+create table public.match_recommendations (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  friend_id uuid references public.profiles(id) on delete cascade not null,
+  recommendation jsonb not null,
+  created_at timestamptz default now(),
+  unique(user_id, friend_id)
+);
+
 -- Indexes
 create index idx_recommended_user on public.recommended(user_id);
+create index idx_match_recs_user on public.match_recommendations(user_id, friend_id);
 create index idx_items_user on public.items(user_id);
 create index idx_items_category on public.items(user_id, category);
 create index idx_friendships_addressee on public.friendships(addressee_id);
@@ -67,6 +78,7 @@ alter table public.profiles enable row level security;
 alter table public.items enable row level security;
 alter table public.friendships enable row level security;
 alter table public.recommended enable row level security;
+alter table public.match_recommendations enable row level security;
 alter table public.comments enable row level security;
 
 -- Profiles: anyone can read, only own profile can update
@@ -102,6 +114,14 @@ create policy "Users can insert own recommended" on public.recommended
   for insert with check (auth.uid() = user_id);
 create policy "Users can delete own recommended" on public.recommended
   for delete using (auth.uid() = user_id);
+
+-- Match recommendations: only owner can read, insert, update
+create policy "Match recs viewable by owner" on public.match_recommendations
+  for select using (auth.uid() = user_id);
+create policy "Users can insert own match recs" on public.match_recommendations
+  for insert with check (auth.uid() = user_id);
+create policy "Users can update own match recs" on public.match_recommendations
+  for update using (auth.uid() = user_id);
 
 -- Comments: anyone can read (on items they can see), logged-in users can post
 create policy "Comments are viewable by everyone" on public.comments
