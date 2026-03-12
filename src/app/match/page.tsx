@@ -95,7 +95,7 @@ function MatchContent() {
     }
   }, [user, loading, router, friendId, loadMatch, loadSavedRec]);
 
-  async function addToRecommended(title: string, category: string, creator: string) {
+  async function addToRecommended(title: string, category: string, creator: string, source?: string) {
     const key = `${category}:${title}`;
     if (addedItems.has(key)) return;
     try {
@@ -106,11 +106,34 @@ function MatchContent() {
           category,
           title,
           creator,
-          source: `AI pick from comparing with ${data?.friend.displayName || data?.friend.username || "friend"}`,
+          source: source || `AI pick from comparing with ${data?.friend.displayName || data?.friend.username || "friend"}`,
         }),
       });
       if (res.ok || res.status === 409) {
         setAddedItems((prev) => new Set(prev).add(key));
+      }
+    } catch {
+      // silently fail
+    }
+  }
+
+  const [savedShelfItems, setSavedShelfItems] = useState<Set<string>>(new Set());
+
+  async function saveFromShelf(item: { id: string; title: string; category: string; creator: string }) {
+    const friendName = data?.friend.displayName || data?.friend.username || "friend";
+    try {
+      const res = await fetch("/api/recommended", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: item.category,
+          title: item.title,
+          creator: item.creator,
+          source: `From ${friendName}'s shelf`,
+        }),
+      });
+      if (res.ok || res.status === 409) {
+        setSavedShelfItems((prev) => new Set(prev).add(item.id));
       }
     } catch {
       // silently fail
@@ -248,7 +271,7 @@ function MatchContent() {
             })}
           </div>
           {theirItems.filter((i) => i.category === shelfCategory).length > 0 ? (
-            <ItemGrid items={theirItems} category={shelfCategory} showComments viewingUserId={friendId!} />
+            <ItemGrid items={theirItems} category={shelfCategory} showComments viewingUserId={friendId!} onSave={saveFromShelf} savedItems={savedShelfItems} />
           ) : (
             <div className="text-center py-12 text-muted">
               <p>No {shelfCategory === "book" ? "books" : shelfCategory === "film" ? "films" : "TV shows"} yet.</p>

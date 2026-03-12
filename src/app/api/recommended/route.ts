@@ -46,7 +46,7 @@ export async function GET() {
         table: "friend_recommendations" as const,
       };
     }),
-  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  ].sort((a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime());
 
   return NextResponse.json({ items });
 }
