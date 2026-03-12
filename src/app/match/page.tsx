@@ -57,6 +57,7 @@ function MatchContent() {
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loadingRec, setLoadingRec] = useState(false);
   const [activeTab, setActiveTab] = useState<"matches" | "shelf">("matches");
+  const [shelfCategory, setShelfCategory] = useState<"book" | "film" | "tv">("book");
   const [theirItems, setTheirItems] = useState<Item[]>([]);
   const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
 
@@ -196,21 +197,29 @@ function MatchContent() {
       {/* Friend's shelf view */}
       {activeTab === "shelf" && (
         <div className="mb-6">
-          {(["book", "film", "tv"] as const).map((cat) => {
-            const catItems = theirItems.filter((i) => i.category === cat);
-            if (catItems.length === 0) return null;
-            return (
-              <div key={cat} className="mb-6">
-                <h3 className="text-sm font-medium text-muted mb-3">
-                  {cat === "book" ? "Books" : cat === "film" ? "Films" : "TV Shows"} ({catItems.length})
-                </h3>
-                <ItemGrid items={catItems} category={cat} showComments viewingUserId={friendId!} />
-              </div>
-            );
-          })}
-          {theirItems.length === 0 && (
+          <div className="flex gap-2 mb-4">
+            {([["book", "Books"], ["film", "Films"], ["tv", "TV Shows"]] as const).map(([key, label]) => {
+              const count = theirItems.filter((i) => i.category === key).length;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setShelfCategory(key)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    shelfCategory === key
+                      ? "bg-coral text-white"
+                      : "bg-surface text-muted border border-border hover:text-foreground"
+                  }`}
+                >
+                  {label} ({count})
+                </button>
+              );
+            })}
+          </div>
+          {theirItems.filter((i) => i.category === shelfCategory).length > 0 ? (
+            <ItemGrid items={theirItems} category={shelfCategory} showComments viewingUserId={friendId!} />
+          ) : (
             <div className="text-center py-12 text-muted">
-              <p>{friend.displayName || friend.username} hasn&apos;t added anything yet.</p>
+              <p>No {shelfCategory === "book" ? "books" : shelfCategory === "film" ? "films" : "TV shows"} yet.</p>
             </div>
           )}
         </div>
