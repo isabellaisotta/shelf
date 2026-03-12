@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import MediaSearch from "@/components/MediaSearch";
 import ItemGrid from "@/components/ItemGrid";
+import FriendPickerModal from "@/components/FriendPickerModal";
 
 interface Item {
   id: string;
@@ -24,6 +25,8 @@ export default function ProfilePage() {
   const [items, setItems] = useState<Item[]>([]);
   const [activeTab, setActiveTab] = useState<Category>("book");
   const [addMode, setAddMode] = useState(false);
+  const [recommendItem, setRecommendItem] = useState<Item | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const loadItems = useCallback(async () => {
     const res = await fetch("/api/items");
@@ -54,6 +57,32 @@ export default function ProfilePage() {
       body: JSON.stringify({ id }),
     });
     await loadItems();
+  }
+
+  async function recommendToFriend(friendId: string, friendName: string) {
+    if (!recommendItem) return;
+    try {
+      const res = await fetch("/api/recommended/friend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toUserId: friendId,
+          category: recommendItem.category,
+          title: recommendItem.title,
+          creator: recommendItem.creator,
+          coverUrl: recommendItem.cover_url,
+        }),
+      });
+      if (res.ok) {
+        setToast(`Sent to ${friendName}`);
+      } else if (res.status === 409) {
+        setToast(`Already sent to ${friendName}`);
+      }
+    } catch {
+      setToast("Failed to send");
+    }
+    setRecommendItem(null);
+    setTimeout(() => setToast(null), 2500);
   }
 
   async function reorderItems(updates: { id: string; rank: number }[]) {
@@ -152,7 +181,20 @@ export default function ProfilePage() {
         editable
         onDelete={deleteItem}
         onReorder={reorderItems}
+        onRecommend={(item) => setRecommendItem(item)}
       />
+
+      <FriendPickerModal
+        isOpen={!!recommendItem}
+        onClose={() => setRecommendItem(null)}
+        onSelect={recommendToFriend}
+      />
+
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-surface border border-coral/40 text-foreground text-sm px-4 py-2.5 rounded-xl shadow-lg z-50">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

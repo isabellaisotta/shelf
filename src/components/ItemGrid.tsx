@@ -30,9 +30,10 @@ interface Props {
   viewingUserId?: string;
   onAdd?: (item: Item) => void;
   addedItems?: Set<string>;
+  onRecommend?: (item: Item) => void;
 }
 
-export default function ItemGrid({ items, category, editable = false, onDelete, onReorder, showComments = false, onAdd, addedItems }: Props) {
+export default function ItemGrid({ items, category, editable = false, onDelete, onReorder, showComments = false, onAdd, addedItems, onRecommend }: Props) {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -157,6 +158,18 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
                 }`}
               >
                 {addedItems?.has(item.id) ? "Added to Recommended" : "+ Add to Recommended"}
+              </button>
+            )}
+            {onRecommend && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRecommend(item);
+                }}
+                className="absolute bottom-14 right-2 text-xs font-medium px-2 py-1 rounded-lg z-10 transition-all bg-coral-muted text-coral hover:bg-coral hover:text-white opacity-0 group-hover:opacity-100"
+                title="Send to a friend"
+              >
+                Send to friend
               </button>
             )}
             {item.cover_url ? (
