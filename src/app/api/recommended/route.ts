@@ -13,12 +13,16 @@ export async function GET() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  // Get friend recommendations sent to me
-  const { data: friendItems } = await supabase
+  // Get friend recommendations sent to me (table may not exist yet)
+  let friendItems: Record<string, unknown>[] = [];
+  const { data: friendData, error: friendError } = await supabase
     .from("friend_recommendations")
     .select("*, from_user:profiles!friend_recommendations_from_user_id_fkey(username, display_name)")
     .eq("to_user_id", user.id)
     .order("created_at", { ascending: false });
+  if (!friendError && friendData) {
+    friendItems = friendData;
+  }
 
   // Merge into a single list with consistent shape
   const items = [
@@ -33,7 +37,7 @@ export async function GET() {
       created_at: i.created_at,
       table: "recommended" as const,
     })),
-    ...(friendItems || []).map((i: Record<string, unknown>) => {
+    ...friendItems.map((i: Record<string, unknown>) => {
       const fromUser = i.from_user as { username: string; display_name: string } | null;
       const name = fromUser?.display_name || fromUser?.username || "A friend";
       return {
