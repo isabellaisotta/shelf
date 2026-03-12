@@ -29,6 +29,7 @@ export async function GET() {
       creator: i.creator,
       source: (i.source as string) || "Added by you",
       source_type: (i.source as string)?.startsWith("AI pick") ? "ai" : "self",
+      notes: (i.notes as string) || "",
       created_at: i.created_at,
       table: "recommended" as const,
     })),
@@ -42,6 +43,7 @@ export async function GET() {
         creator: i.creator,
         source: `Recommended by ${name}`,
         source_type: "friend" as const,
+        notes: "",
         created_at: i.created_at,
         table: "friend_recommendations" as const,
       };
@@ -56,7 +58,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
 
-  const { category, title, creator, source } = await req.json();
+  const { category, title, creator, source, notes } = await req.json();
 
   if (!category || !title) {
     return NextResponse.json({ error: "Category and title required" }, { status: 400 });
@@ -70,6 +72,7 @@ export async function POST(req: NextRequest) {
       title,
       creator: creator || "",
       source: source || "Added by you",
+      notes: notes || "",
     })
     .select()
     .single();
@@ -81,6 +84,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({ ok: true, item });
+}
+
+export async function PATCH(req: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
+
+  const { id, notes } = await req.json();
+  if (!id) return NextResponse.json({ error: "Item id required" }, { status: 400 });
+
+  await supabase
+    .from("recommended")
+    .update({ notes: notes || "" })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: NextRequest) {

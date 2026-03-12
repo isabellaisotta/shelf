@@ -12,6 +12,7 @@ interface RecommendedItem {
   creator: string;
   source: string;
   source_type: "self" | "ai" | "friend";
+  notes: string;
   created_at: string;
   table: "recommended" | "friend_recommendations";
 }
@@ -96,6 +97,24 @@ export default function RecommendedPage() {
     if (item.source_type === "friend") return "text-coral";
     if (item.source_type === "ai") return "text-muted-light";
     return "text-muted-light";
+  }
+
+  const [editingNotes, setEditingNotes] = useState<string | null>(null);
+  const [notesValue, setNotesValue] = useState("");
+
+  function startEditNotes(item: RecommendedItem) {
+    setEditingNotes(item.id);
+    setNotesValue(item.notes || "");
+  }
+
+  async function saveNotes(id: string) {
+    await fetch("/api/recommended", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, notes: notesValue }),
+    });
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, notes: notesValue } : i));
+    setEditingNotes(null);
   }
 
   return (
@@ -184,29 +203,75 @@ export default function RecommendedPage() {
           {filtered.map((item) => (
             <div
               key={item.id}
-              className="group bg-surface rounded-xl border border-border p-4 flex items-center gap-4 hover:border-coral/30 transition-colors"
+              className="group bg-surface rounded-xl border border-border p-4 hover:border-coral/30 transition-colors"
             >
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-coral-muted flex items-center justify-center">
-                <span className="text-coral text-xs font-bold uppercase">
-                  {item.category === "book" ? "BK" : item.category === "film" ? "FM" : "TV"}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-foreground">{item.title}</div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  {item.creator && (
-                    <span className="text-sm text-muted">{item.creator}</span>
-                  )}
-                  {item.creator && <span className="text-muted-light">·</span>}
-                  <span className={`text-xs ${sourceColor(item)}`}>{sourceLabel(item)}</span>
+              <div className="flex items-center gap-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-coral-muted flex items-center justify-center">
+                  <span className="text-coral text-xs font-bold uppercase">
+                    {item.category === "book" ? "BK" : item.category === "film" ? "FM" : "TV"}
+                  </span>
                 </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-foreground">{item.title}</div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {item.creator && (
+                      <span className="text-sm text-muted">{item.creator}</span>
+                    )}
+                    {item.creator && <span className="text-muted-light">·</span>}
+                    <span className={`text-xs ${sourceColor(item)}`}>{sourceLabel(item)}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => removeItem(item.id, item.table)}
+                  className="px-3 py-1.5 text-xs text-muted-light hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  Remove
+                </button>
               </div>
-              <button
-                onClick={() => removeItem(item.id, item.table)}
-                className="px-3 py-1.5 text-xs text-muted-light hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-              >
-                Remove
-              </button>
+              {/* Notes */}
+              {item.table === "recommended" && (
+                <div className="mt-2 ml-14">
+                  {editingNotes === item.id ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={notesValue}
+                        onChange={(e) => setNotesValue(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && saveNotes(item.id)}
+                        placeholder="Add a note..."
+                        autoFocus
+                        className="flex-1 px-3 py-1.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-light focus:ring-2 focus:ring-coral focus:border-transparent"
+                      />
+                      <button
+                        onClick={() => saveNotes(item.id)}
+                        className="px-3 py-1.5 bg-coral text-white rounded-lg text-xs font-medium hover:bg-coral-hover"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingNotes(null)}
+                        className="px-3 py-1.5 text-muted-light hover:text-foreground rounded-lg text-xs"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : item.notes ? (
+                    <p
+                      onClick={() => startEditNotes(item)}
+                      className="text-sm text-muted cursor-pointer hover:text-foreground transition-colors"
+                    >
+                      {item.notes}
+                    </p>
+                  ) : (
+                    <button
+                      onClick={() => startEditNotes(item)}
+                      className="text-xs text-muted-light hover:text-muted transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      + Add note
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

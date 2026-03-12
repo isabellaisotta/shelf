@@ -51,6 +51,7 @@ create table public.recommended (
   title text not null,
   creator text default '',
   source text default '',
+  notes text default '',
   created_at timestamptz default now(),
   unique(user_id, category, title)
 );
