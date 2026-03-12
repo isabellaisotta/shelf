@@ -32,6 +32,21 @@ interface MatchData {
   stats: { totalMatches: number; myTotal: number; theirTotal: number };
 }
 
+interface Recommendation {
+  vibe: string;
+  common_ground: string[];
+  differences: string[];
+  from_their_list: { title: string; category: string; reason: string }[];
+  new_picks: { title: string; creator: string; category: string; reason: string }[];
+}
+
+function CategoryLabel({ category }: { category: string }) {
+  const label = category === "book" ? "Book" : category === "film" ? "Film" : "TV";
+  return (
+    <span className="text-[10px] uppercase tracking-wider text-muted-light font-medium">{label}</span>
+  );
+}
+
 function MatchContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -39,7 +54,7 @@ function MatchContent() {
   const friendId = searchParams.get("friendId");
 
   const [data, setData] = useState<MatchData | null>(null);
-  const [recommendation, setRecommendation] = useState<string | null>(null);
+  const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loadingRec, setLoadingRec] = useState(false);
   const [activeTab, setActiveTab] = useState<"matches" | "theirs" | "mine">("matches");
   const [theirItems, setTheirItems] = useState<Item[]>([]);
@@ -50,7 +65,6 @@ function MatchContent() {
     const matchData = await res.json();
     setData(matchData);
 
-    // Load their full items for comments
     const itemsRes = await fetch(`/api/items?userId=${friendId}`);
     const itemsData = await itemsRes.json();
     setTheirItems(itemsData.items || []);
@@ -64,64 +78,67 @@ function MatchContent() {
   async function getRecommendation() {
     if (!friendId) return;
     setLoadingRec(true);
-    const res = await fetch(`/api/recommend?friendId=${friendId}`);
-    const recData = await res.json();
-    setRecommendation(recData.recommendation);
+    try {
+      const res = await fetch(`/api/recommend?friendId=${friendId}`);
+      const recData = await res.json();
+      setRecommendation(recData.recommendation);
+    } catch {
+      // silently fail
+    }
     setLoadingRec(false);
   }
 
   if (loading || !user || !data) return null;
 
   const friend = data.friend;
-  const categoryEmoji = (cat: string) => cat === "book" ? "📚" : cat === "film" ? "🎬" : "📺";
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
       {/* Header */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+      <div className="bg-surface rounded-xl border border-border p-6 mb-6">
+        <h1 className="text-2xl font-bold text-foreground mb-2">
           You & {friend.displayName || friend.username}
         </h1>
         <div className="flex gap-6">
           <div className="text-center">
-            <div className="text-3xl font-bold text-indigo-600">{data.stats.totalMatches}</div>
-            <div className="text-xs text-gray-500">matches</div>
+            <div className="text-3xl font-bold text-coral">{data.stats.totalMatches}</div>
+            <div className="text-xs text-muted">matches</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-gray-400">{data.stats.myTotal}</div>
-            <div className="text-xs text-gray-500">your items</div>
+            <div className="text-3xl font-bold text-foreground">{data.stats.myTotal}</div>
+            <div className="text-xs text-muted">your items</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-gray-400">{data.stats.theirTotal}</div>
-            <div className="text-xs text-gray-500">their items</div>
+            <div className="text-3xl font-bold text-foreground">{data.stats.theirTotal}</div>
+            <div className="text-xs text-muted">their items</div>
           </div>
         </div>
       </div>
 
       {/* Matches */}
       {data.matches.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Your matches</h2>
+        <div className="bg-surface rounded-xl border border-border p-6 mb-6">
+          <h2 className="font-semibold text-foreground mb-4">Your matches</h2>
           <div className="space-y-3">
             {data.matches.map((m, i) => (
-              <div key={i} className="flex items-center gap-4 py-3 border-b border-gray-100 last:border-0">
-                <div className="text-lg font-bold text-indigo-600 w-8">#{i + 1}</div>
+              <div key={i} className="flex items-center gap-4 py-3 border-b border-border last:border-0">
+                <div className="text-lg font-bold text-coral w-8">#{i + 1}</div>
                 {m.coverUrl ? (
                   <img src={m.coverUrl} alt="" className="w-10 h-14 object-cover rounded" />
                 ) : (
-                  <div className="w-10 h-14 bg-indigo-100 rounded flex items-center justify-center">
-                    {categoryEmoji(m.category)}
+                  <div className="w-10 h-14 bg-surface-hover rounded flex items-center justify-center">
+                    <CategoryLabel category={m.category} />
                   </div>
                 )}
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">{m.title}</div>
-                  <div className="text-sm text-gray-500">
-                    {categoryEmoji(m.category)} You: #{m.myRank} · {friend.displayName}: #{m.theirRank}
+                  <div className="font-medium text-foreground">{m.title}</div>
+                  <div className="text-sm text-muted">
+                    You: #{m.myRank} / {friend.displayName}: #{m.theirRank}
                   </div>
                 </div>
                 {i === 0 && (
-                  <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">
-                    Closest match!
+                  <span className="px-3 py-1 bg-coral-muted text-coral text-xs font-medium rounded-full">
+                    Closest match
                   </span>
                 )}
               </div>
@@ -134,16 +151,16 @@ function MatchContent() {
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => setActiveTab("theirs")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-            activeTab === "theirs" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 border border-gray-200"
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === "theirs" ? "bg-coral text-white" : "bg-surface text-muted border border-border hover:text-foreground"
           }`}
         >
           {friend.displayName}&apos;s unique picks
         </button>
         <button
           onClick={() => setActiveTab("mine")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-            activeTab === "mine" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 border border-gray-200"
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === "mine" ? "bg-coral text-white" : "bg-surface text-muted border border-border hover:text-foreground"
           }`}
         >
           Your unique picks
@@ -157,8 +174,8 @@ function MatchContent() {
             if (catItems.length === 0) return null;
             return (
               <div key={cat} className="mb-6">
-                <h3 className="text-sm font-medium text-gray-500 mb-3">
-                  {categoryEmoji(cat)} {cat === "book" ? "Books" : cat === "film" ? "Films" : "TV Shows"}
+                <h3 className="text-sm font-medium text-muted mb-3">
+                  {cat === "book" ? "Books" : cat === "film" ? "Films" : "TV Shows"}
                 </h3>
                 <ItemGrid items={catItems} category={cat} showComments viewingUserId={friendId!} />
               </div>
@@ -169,23 +186,26 @@ function MatchContent() {
 
       {activeTab === "mine" && (
         <div className="mb-6">
-          <p className="text-sm text-gray-400 mb-4">
+          <p className="text-sm text-muted mb-4">
             These are in your list but not in {friend.displayName}&apos;s.
           </p>
-          {data.onlyMine.map((item) => (
-            <div key={item.id} className="inline-flex items-center gap-2 bg-white rounded-lg border border-gray-200 px-3 py-2 mr-2 mb-2 text-sm">
-              {categoryEmoji(item.category)} {item.title}
-            </div>
-          ))}
+          <div className="flex flex-wrap gap-2">
+            {data.onlyMine.map((item) => (
+              <div key={item.id} className="inline-flex items-center gap-2 bg-surface rounded-lg border border-border px-3 py-2 text-sm text-foreground">
+                <CategoryLabel category={item.category} />
+                {item.title}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {/* AI Recommendations */}
-      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 p-6">
+      <div className="mt-8">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-semibold text-gray-900">AI Recommendations</h2>
-            <p className="text-xs text-gray-500 mt-1">
+            <h2 className="text-lg font-semibold text-foreground">AI Recommendations</h2>
+            <p className="text-xs text-muted-light mt-0.5">
               Powered by Claude. Based only on the titles in your lists.
             </p>
           </div>
@@ -193,20 +213,102 @@ function MatchContent() {
             <button
               onClick={getRecommendation}
               disabled={loadingRec}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+              className="px-5 py-2 bg-coral text-white rounded-lg text-sm font-medium hover:bg-coral-hover disabled:opacity-50 transition-colors"
             >
-              {loadingRec ? "Thinking..." : "Get recommendations"}
+              {loadingRec ? "Analysing..." : "Get recommendations"}
             </button>
           )}
         </div>
 
         {loadingRec && (
-          <div className="text-gray-500 text-sm">Analyzing your tastes...</div>
+          <div className="bg-surface rounded-xl border border-border p-8 text-center">
+            <div className="text-muted text-sm">Analysing your combined tastes...</div>
+          </div>
         )}
 
         {recommendation && (
-          <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
-            {recommendation}
+          <div className="space-y-4">
+            {/* Vibe */}
+            {recommendation.vibe && (
+              <div className="bg-surface rounded-xl border border-coral/30 p-5">
+                <p className="text-foreground text-lg font-medium italic">&ldquo;{recommendation.vibe}&rdquo;</p>
+              </div>
+            )}
+
+            {/* Common ground + Differences side by side */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {recommendation.common_ground.length > 0 && (
+                <div className="bg-surface rounded-xl border border-border p-5">
+                  <h3 className="text-sm font-semibold text-coral uppercase tracking-wider mb-3">Common ground</h3>
+                  <ul className="space-y-2">
+                    {recommendation.common_ground.map((point, i) => (
+                      <li key={i} className="text-sm text-foreground leading-relaxed">{point}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {recommendation.differences.length > 0 && (
+                <div className="bg-surface rounded-xl border border-border p-5">
+                  <h3 className="text-sm font-semibold text-muted uppercase tracking-wider mb-3">Where you diverge</h3>
+                  <ul className="space-y-2">
+                    {recommendation.differences.map((point, i) => (
+                      <li key={i} className="text-sm text-foreground leading-relaxed">{point}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* From their list */}
+            {recommendation.from_their_list.length > 0 && (
+              <div className="bg-surface rounded-xl border border-border p-5">
+                <h3 className="text-sm font-semibold text-coral uppercase tracking-wider mb-4">
+                  Try from {friend.displayName}&apos;s shelf
+                </h3>
+                <div className="space-y-3">
+                  {recommendation.from_their_list.map((pick, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-coral-muted text-coral text-xs font-bold flex items-center justify-center mt-0.5">
+                        {i + 1}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-foreground">{pick.title}</span>
+                          <CategoryLabel category={pick.category} />
+                        </div>
+                        <p className="text-sm text-muted mt-0.5">{pick.reason}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* New picks */}
+            {recommendation.new_picks.length > 0 && (
+              <div className="bg-surface rounded-xl border border-border p-5">
+                <h3 className="text-sm font-semibold text-coral uppercase tracking-wider mb-4">
+                  New for both of you
+                </h3>
+                <div className="space-y-3">
+                  {recommendation.new_picks.map((pick, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-coral-muted text-coral text-xs font-bold flex items-center justify-center mt-0.5">
+                        {i + 1}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-foreground">{pick.title}</span>
+                          {pick.creator && <span className="text-sm text-muted-light">by {pick.creator}</span>}
+                          <CategoryLabel category={pick.category} />
+                        </div>
+                        <p className="text-sm text-muted mt-0.5">{pick.reason}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -216,7 +318,7 @@ function MatchContent() {
 
 export default function MatchPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-400">Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-muted">Loading...</div>}>
       <MatchContent />
     </Suspense>
   );
