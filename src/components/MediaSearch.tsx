@@ -72,7 +72,7 @@ export default function MediaSearch({ category, onSelect }: Props) {
         className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-light focus:ring-2 focus:ring-coral focus:border-transparent"
       />
       {loading && (
-        <div className="absolute right-3 top-2.5 text-gray-400 text-sm">Searching...</div>
+        <div className="absolute right-3 top-2.5 text-muted text-sm">Searching...</div>
       )}
 
       {showResults && results.length > 0 && (
