@@ -493,7 +493,7 @@ function MatchContent() {
                   </button>
                 ))}
               </div>
-              <MediaSearch category={sendCategory} onSelect={sendRecommendation} />
+              <MediaSearch key={sendCategory} category={sendCategory} onSelect={sendRecommendation} />
               <p className="text-xs text-muted-light mt-2">
                 Search and select to send to {friendName}
               </p>
