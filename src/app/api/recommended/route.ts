@@ -13,8 +13,9 @@ export async function GET() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  // Get friend recommendations sent to me (table may not exist yet)
+  // Get friend recommendations sent to me
   let friendItems: Record<string, unknown>[] = [];
+  // Try with join first, fall back to plain query
   const { data: friendData, error: friendError } = await supabase
     .from("friend_recommendations")
     .select("*, from_user:profiles!friend_recommendations_from_user_id_fkey(username, display_name)")
@@ -22,6 +23,25 @@ export async function GET() {
     .order("created_at", { ascending: false });
   if (!friendError && friendData) {
     friendItems = friendData;
+  } else {
+    // Fallback: fetch without join, then look up sender names separately
+    const { data: plainData } = await supabase
+      .from("friend_recommendations")
+      .select("*")
+      .eq("to_user_id", user.id)
+      .order("created_at", { ascending: false });
+    if (plainData && plainData.length > 0) {
+      const senderIds = [...new Set(plainData.map((r: Record<string, unknown>) => r.from_user_id as string))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, display_name")
+        .in("id", senderIds);
+      const profileMap = new Map((profiles || []).map((p: { id: string; username: string; display_name: string }) => [p.id, p]));
+      friendItems = plainData.map((r: Record<string, unknown>) => ({
+        ...r,
+        from_user: profileMap.get(r.from_user_id as string) || null,
+      }));
+    }
   }
 
   // Merge into a single list with consistent shape

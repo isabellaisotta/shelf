@@ -472,8 +472,8 @@ function MatchContent() {
       )}
 
       {showSendRec && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowSendRec(false)}>
-          <div className="bg-surface rounded-xl border border-border max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 pt-24" onClick={() => setShowSendRec(false)}>
+          <div className="bg-surface rounded-xl border border-border max-w-md w-full overflow-visible" onClick={(e) => e.stopPropagation()}>
             <div className="p-5">
               <h3 className="font-semibold text-foreground mb-4">
                 Send recommendation to {friendName}
@@ -493,7 +493,9 @@ function MatchContent() {
                   </button>
                 ))}
               </div>
-              <MediaSearch key={sendCategory} category={sendCategory} onSelect={sendRecommendation} />
+              <div className="relative z-[60]">
+                <MediaSearch key={sendCategory} category={sendCategory} onSelect={sendRecommendation} />
+              </div>
               <p className="text-xs text-muted-light mt-2">
                 Search and select to send to {friendName}
               </p>
