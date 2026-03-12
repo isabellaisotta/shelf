@@ -74,11 +74,11 @@ export default function FriendsPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Friends</h1>
+      <h1 className="text-2xl font-bold text-foreground mb-6">Friends</h1>
 
       {/* Add friend */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h2 className="font-medium text-gray-700 mb-3">Add a friend</h2>
+      <div className="bg-surface rounded-xl border border-border p-6 mb-6">
+        <h2 className="font-medium text-foreground mb-3">Add a friend</h2>
         <div className="flex gap-2">
           <input
             type="text"
@@ -86,18 +86,18 @@ export default function FriendsPage() {
             onChange={(e) => setUsername(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendRequest()}
             placeholder="Enter their username"
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="flex-1 px-4 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-light focus:ring-2 focus:ring-coral focus:border-transparent"
           />
           <button
             onClick={sendRequest}
             disabled={!username.trim()}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
+            className="px-6 py-2 bg-coral text-white rounded-lg font-medium hover:bg-coral-hover disabled:opacity-50"
           >
             Send
           </button>
         </div>
         {message && (
-          <p className={`text-sm mt-2 ${message.includes("sent") ? "text-green-600" : "text-red-500"}`}>
+          <p className={`text-sm mt-2 ${message.includes("sent") ? "text-green-400" : "text-red-400"}`}>
             {message}
           </p>
         )}
@@ -105,25 +105,25 @@ export default function FriendsPage() {
 
       {/* Incoming requests */}
       {incoming.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="font-medium text-gray-700 mb-3">Friend requests</h2>
+        <div className="bg-surface rounded-xl border border-border p-6 mb-6">
+          <h2 className="font-medium text-foreground mb-3">Friend requests</h2>
           <div className="space-y-3">
             {incoming.map((req) => (
               <div key={req.friendship_id} className="flex items-center justify-between py-2">
                 <div>
-                  <span className="font-medium text-gray-900">{req.display_name}</span>
-                  <span className="text-gray-500 text-sm ml-2">@{req.username}</span>
+                  <span className="font-medium text-foreground">{req.display_name}</span>
+                  <span className="text-muted text-sm ml-2">@{req.username}</span>
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => respondToRequest(req.friendship_id, "accept")}
-                    className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700"
+                    className="px-4 py-1.5 bg-coral text-white rounded-lg text-sm hover:bg-coral-hover"
                   >
                     Accept
                   </button>
                   <button
                     onClick={() => respondToRequest(req.friendship_id, "reject")}
-                    className="px-4 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200"
+                    className="px-4 py-1.5 bg-surface-hover text-muted rounded-lg text-sm border border-border hover:text-foreground"
                   >
                     Decline
                   </button>
@@ -136,16 +136,16 @@ export default function FriendsPage() {
 
       {/* Outgoing requests */}
       {outgoing.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="font-medium text-gray-700 mb-3">Pending requests</h2>
+        <div className="bg-surface rounded-xl border border-border p-6 mb-6">
+          <h2 className="font-medium text-foreground mb-3">Pending requests</h2>
           <div className="space-y-2">
             {outgoing.map((req) => (
               <div key={req.friendship_id} className="flex items-center justify-between py-2">
                 <div>
-                  <span className="font-medium text-gray-900">{req.display_name}</span>
-                  <span className="text-gray-500 text-sm ml-2">@{req.username}</span>
+                  <span className="font-medium text-foreground">{req.display_name}</span>
+                  <span className="text-muted text-sm ml-2">@{req.username}</span>
                 </div>
-                <span className="text-sm text-gray-400">Pending</span>
+                <span className="text-sm text-muted-light">Pending</span>
               </div>
             ))}
           </div>
@@ -153,23 +153,23 @@ export default function FriendsPage() {
       )}
 
       {/* Friends list */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="font-medium text-gray-700 mb-3">Your friends</h2>
+      <div className="bg-surface rounded-xl border border-border p-6">
+        <h2 className="font-medium text-foreground mb-3">Your friends</h2>
         {friends.length === 0 ? (
-          <p className="text-gray-400 text-sm">No friends yet. Add someone above!</p>
+          <p className="text-muted text-sm">No friends yet. Add someone above!</p>
         ) : (
           <div className="space-y-2">
             {friends.map((friend) => (
               <Link
                 key={friend.id}
                 href={`/match?friendId=${friend.id}`}
-                className="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-indigo-50 transition-colors"
+                className="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-surface-hover transition-colors"
               >
                 <div>
-                  <span className="font-medium text-gray-900">{friend.display_name}</span>
-                  <span className="text-gray-500 text-sm ml-2">@{friend.username}</span>
+                  <span className="font-medium text-foreground">{friend.display_name}</span>
+                  <span className="text-muted text-sm ml-2">@{friend.username}</span>
                 </div>
-                <span className="text-indigo-600 text-sm font-medium">Compare tastes →</span>
+                <span className="text-coral text-sm font-medium">Compare tastes</span>
               </Link>
             ))}
           </div>

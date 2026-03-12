@@ -69,14 +69,14 @@ export default function MediaSearch({ category, onSelect }: Props) {
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => results.length > 0 && setShowResults(true)}
         placeholder={`Search for a ${categoryLabel}...`}
-        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+        className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-light focus:ring-2 focus:ring-coral focus:border-transparent"
       />
       {loading && (
         <div className="absolute right-3 top-2.5 text-gray-400 text-sm">Searching...</div>
       )}
 
       {showResults && results.length > 0 && (
-        <div className="absolute z-10 mt-1 w-full bg-white rounded-lg shadow-lg border border-gray-200 max-h-80 overflow-y-auto">
+        <div className="absolute z-10 mt-1 w-full bg-surface rounded-lg shadow-lg border border-border max-h-80 overflow-y-auto">
           {results.map((r, i) => (
             <button
               key={i}
@@ -86,18 +86,18 @@ export default function MediaSearch({ category, onSelect }: Props) {
                 setResults([]);
                 setShowResults(false);
               }}
-              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-indigo-50 text-left border-b border-gray-100 last:border-0"
+              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-surface-hover text-left border-b border-border last:border-0"
             >
               {r.coverUrl ? (
                 <img src={r.coverUrl} alt="" className="w-10 h-14 object-cover rounded" />
               ) : (
-                <div className="w-10 h-14 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-400">
+                <div className="w-10 h-14 bg-surface-hover rounded flex items-center justify-center text-xs text-muted-light">
                   No img
                 </div>
               )}
               <div>
-                <div className="font-medium text-gray-900">{r.title}</div>
-                <div className="text-sm text-gray-500">
+                <div className="font-medium text-foreground">{r.title}</div>
+                <div className="text-sm text-muted">
                   {r.creator && <span>{r.creator}</span>}
                   {r.creator && r.year && <span> · </span>}
                   {r.year && <span>{r.year}</span>}
