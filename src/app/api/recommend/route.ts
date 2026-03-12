@@ -69,7 +69,8 @@ Return 3-5 items in from_their_list and 3-5 in new_picks. Use their actual names
     });
 
     const data = await res.json();
-    const text = data.content?.[0]?.text || "";
+    const raw = data.content?.[0]?.text || "";
+    const text = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
 
     try {
       const parsed = JSON.parse(text);
