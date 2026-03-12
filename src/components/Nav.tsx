@@ -20,6 +20,9 @@ export default function Nav() {
         <Link href="/friends" className="text-sm text-muted hover:text-foreground transition-colors">
           Friends
         </Link>
+        <Link href="/recommended" className="text-sm text-muted hover:text-foreground transition-colors">
+          Recommended
+        </Link>
       </div>
       <div className="flex items-center gap-4">
         <span className="text-sm text-muted-light">@{user.username}</span>

@@ -58,6 +58,7 @@ function MatchContent() {
   const [loadingRec, setLoadingRec] = useState(false);
   const [activeTab, setActiveTab] = useState<"matches" | "theirs" | "mine">("matches");
   const [theirItems, setTheirItems] = useState<Item[]>([]);
+  const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
 
   const loadMatch = useCallback(async () => {
     if (!friendId) return;
@@ -74,6 +75,28 @@ function MatchContent() {
     if (!loading && !user) router.push("/login");
     if (user && friendId) loadMatch();
   }, [user, loading, router, friendId, loadMatch]);
+
+  async function addToRecommended(title: string, category: string, creator: string) {
+    const key = `${category}:${title}`;
+    if (addedItems.has(key)) return;
+    try {
+      const res = await fetch("/api/recommended", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category,
+          title,
+          creator,
+          source: `AI pick from comparing with ${data?.friend.displayName || data?.friend.username || "friend"}`,
+        }),
+      });
+      if (res.ok || res.status === 409) {
+        setAddedItems((prev) => new Set(prev).add(key));
+      }
+    } catch {
+      // silently fail
+    }
+  }
 
   async function getRecommendation() {
     if (!friendId) return;
@@ -249,7 +272,7 @@ function MatchContent() {
               )}
               {recommendation.differences.length > 0 && (
                 <div className="bg-surface rounded-xl border border-border p-5">
-                  <h3 className="text-sm font-semibold text-muted uppercase tracking-wider mb-3">Where you diverge</h3>
+                  <h3 className="text-sm font-semibold text-coral uppercase tracking-wider mb-3">Where you diverge</h3>
                   <ul className="space-y-2">
                     {recommendation.differences.map((point, i) => (
                       <li key={i} className="text-sm text-foreground leading-relaxed">{point}</li>
@@ -266,20 +289,35 @@ function MatchContent() {
                   Try from {friend.displayName}&apos;s shelf
                 </h3>
                 <div className="space-y-3">
-                  {recommendation.from_their_list.map((pick, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-coral-muted text-coral text-xs font-bold flex items-center justify-center mt-0.5">
-                        {i + 1}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-foreground">{pick.title}</span>
-                          <CategoryLabel category={pick.category} />
+                  {recommendation.from_their_list.map((pick, i) => {
+                    const key = `${pick.category}:${pick.title}`;
+                    const added = addedItems.has(key);
+                    return (
+                      <div key={i} className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-coral-muted text-coral text-xs font-bold flex items-center justify-center mt-0.5">
+                          {i + 1}
                         </div>
-                        <p className="text-sm text-muted mt-0.5">{pick.reason}</p>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground">{pick.title}</span>
+                            <CategoryLabel category={pick.category} />
+                          </div>
+                          <p className="text-sm text-muted mt-0.5">{pick.reason}</p>
+                        </div>
+                        <button
+                          onClick={() => addToRecommended(pick.title, pick.category, "")}
+                          disabled={added}
+                          className={`flex-shrink-0 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                            added
+                              ? "bg-surface-hover text-muted-light"
+                              : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
+                          }`}
+                        >
+                          {added ? "Added" : "+ Save"}
+                        </button>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -291,21 +329,36 @@ function MatchContent() {
                   New for both of you
                 </h3>
                 <div className="space-y-3">
-                  {recommendation.new_picks.map((pick, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-coral-muted text-coral text-xs font-bold flex items-center justify-center mt-0.5">
-                        {i + 1}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-foreground">{pick.title}</span>
-                          {pick.creator && <span className="text-sm text-muted-light">by {pick.creator}</span>}
-                          <CategoryLabel category={pick.category} />
+                  {recommendation.new_picks.map((pick, i) => {
+                    const key = `${pick.category}:${pick.title}`;
+                    const added = addedItems.has(key);
+                    return (
+                      <div key={i} className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-coral-muted text-coral text-xs font-bold flex items-center justify-center mt-0.5">
+                          {i + 1}
                         </div>
-                        <p className="text-sm text-muted mt-0.5">{pick.reason}</p>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground">{pick.title}</span>
+                            {pick.creator && <span className="text-sm text-muted-light">by {pick.creator}</span>}
+                            <CategoryLabel category={pick.category} />
+                          </div>
+                          <p className="text-sm text-muted mt-0.5">{pick.reason}</p>
+                        </div>
+                        <button
+                          onClick={() => addToRecommended(pick.title, pick.category, pick.creator || "")}
+                          disabled={added}
+                          className={`flex-shrink-0 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                            added
+                              ? "bg-surface-hover text-muted-light"
+                              : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
+                          }`}
+                        >
+                          {added ? "Added" : "+ Save"}
+                        </button>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

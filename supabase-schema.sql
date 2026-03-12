@@ -43,7 +43,20 @@ create table public.comments (
   created_at timestamptz default now()
 );
 
+-- Recommended items (saved from AI recommendations)
+create table public.recommended (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  category text not null check (category in ('book', 'film', 'tv')),
+  title text not null,
+  creator text default '',
+  source text default '',
+  created_at timestamptz default now(),
+  unique(user_id, category, title)
+);
+
 -- Indexes
+create index idx_recommended_user on public.recommended(user_id);
 create index idx_items_user on public.items(user_id);
 create index idx_items_category on public.items(user_id, category);
 create index idx_friendships_addressee on public.friendships(addressee_id);
@@ -53,6 +66,7 @@ create index idx_comments_item on public.comments(item_id);
 alter table public.profiles enable row level security;
 alter table public.items enable row level security;
 alter table public.friendships enable row level security;
+alter table public.recommended enable row level security;
 alter table public.comments enable row level security;
 
 -- Profiles: anyone can read, only own profile can update
@@ -80,6 +94,14 @@ create policy "Users can send friend requests" on public.friendships
   for insert with check (auth.uid() = requester_id);
 create policy "Addressee can update friendship status" on public.friendships
   for update using (auth.uid() = addressee_id);
+
+-- Recommended: only owner can read, insert, delete
+create policy "Recommended viewable by owner" on public.recommended
+  for select using (auth.uid() = user_id);
+create policy "Users can insert own recommended" on public.recommended
+  for insert with check (auth.uid() = user_id);
+create policy "Users can delete own recommended" on public.recommended
+  for delete using (auth.uid() = user_id);
 
 -- Comments: anyone can read (on items they can see), logged-in users can post
 create policy "Comments are viewable by everyone" on public.comments
