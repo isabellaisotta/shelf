@@ -117,9 +117,9 @@ function MatchContent() {
     }
   }
 
-  const [savedShelfItems, setSavedShelfItems] = useState<Set<string>>(new Set());
+  const [addedShelfItems, setAddedShelfItems] = useState<Set<string>>(new Set());
 
-  async function saveFromShelf(item: { id: string; title: string; category: string; creator: string }) {
+  async function addFromShelf(item: { id: string; title: string; category: string; creator: string }) {
     const friendName = data?.friend.displayName || data?.friend.username || "friend";
     try {
       const res = await fetch("/api/recommended", {
@@ -133,7 +133,7 @@ function MatchContent() {
         }),
       });
       if (res.ok || res.status === 409) {
-        setSavedShelfItems((prev) => new Set(prev).add(item.id));
+        setAddedShelfItems((prev) => new Set(prev).add(item.id));
       }
     } catch {
       // silently fail
@@ -271,7 +271,7 @@ function MatchContent() {
             })}
           </div>
           {theirItems.filter((i) => i.category === shelfCategory).length > 0 ? (
-            <ItemGrid items={theirItems} category={shelfCategory} showComments viewingUserId={friendId!} onSave={saveFromShelf} savedItems={savedShelfItems} />
+            <ItemGrid items={theirItems} category={shelfCategory} showComments viewingUserId={friendId!} onAdd={addFromShelf} addedItems={addedShelfItems} />
           ) : (
             <div className="text-center py-12 text-muted">
               <p>No {shelfCategory === "book" ? "books" : shelfCategory === "film" ? "films" : "TV shows"} yet.</p>
@@ -376,7 +376,7 @@ function MatchContent() {
                                 : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
                             }`}
                           >
-                            {added ? "Added" : "+ Save"}
+                            {added ? "Added" : "+ Add"}
                           </button>
                         </div>
                       );
@@ -417,7 +417,7 @@ function MatchContent() {
                                 : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
                             }`}
                           >
-                            {added ? "Added" : "+ Save"}
+                            {added ? "Added" : "+ Add"}
                           </button>
                         </div>
                       );

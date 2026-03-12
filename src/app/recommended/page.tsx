@@ -187,7 +187,7 @@ export default function RecommendedPage() {
           </div>
           <MediaSearch category={addCategory} onSelect={addItem} />
           <p className="text-xs text-muted-light mt-2">
-            Search and select to add to your recommendations
+            Search and select to add to Recommended
           </p>
         </div>
       )}

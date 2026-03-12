@@ -28,11 +28,11 @@ interface Props {
   onReorder?: (items: { id: string; rank: number }[]) => void;
   showComments?: boolean;
   viewingUserId?: string;
-  onSave?: (item: Item) => void;
-  savedItems?: Set<string>;
+  onAdd?: (item: Item) => void;
+  addedItems?: Set<string>;
 }
 
-export default function ItemGrid({ items, category, editable = false, onDelete, onReorder, showComments = false, onSave, savedItems }: Props) {
+export default function ItemGrid({ items, category, editable = false, onDelete, onReorder, showComments = false, onAdd, addedItems }: Props) {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -143,20 +143,20 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
                 x
               </button>
             )}
-            {onSave && (
+            {onAdd && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!savedItems?.has(item.id)) onSave(item);
+                  if (!addedItems?.has(item.id)) onAdd(item);
                 }}
-                disabled={savedItems?.has(item.id)}
+                disabled={addedItems?.has(item.id)}
                 className={`absolute top-2 right-2 text-xs font-medium px-2 py-1 rounded-lg z-10 transition-all ${
-                  savedItems?.has(item.id)
+                  addedItems?.has(item.id)
                     ? "bg-surface-hover text-muted-light opacity-100"
                     : "bg-coral-muted text-coral hover:bg-coral hover:text-white opacity-0 group-hover:opacity-100"
                 }`}
               >
-                {savedItems?.has(item.id) ? "Saved" : "+ Save"}
+                {addedItems?.has(item.id) ? "Added" : "+ Add"}
               </button>
             )}
             {item.cover_url ? (
