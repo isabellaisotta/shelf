@@ -11,7 +11,7 @@ interface RecommendedItem {
   title: string;
   creator: string;
   source: string;
-  source_type: "self" | "ai" | "friend";
+  source_type: "self" | "ai" | "friend" | "from-shelf";
   notes: string;
   created_at: string;
   table: "recommended" | "friend_recommendations";
@@ -90,11 +90,13 @@ export default function RecommendedPage() {
   function sourceLabel(item: RecommendedItem) {
     if (item.source_type === "friend") return item.source;
     if (item.source_type === "ai") return item.source;
+    if (item.source_type === "from-shelf") return item.source;
     return "Added by you";
   }
 
   function sourceColor(item: RecommendedItem) {
     if (item.source_type === "friend") return "text-coral";
+    if (item.source_type === "from-shelf") return "text-coral";
     if (item.source_type === "ai") return "text-muted-light";
     return "text-muted-light";
   }

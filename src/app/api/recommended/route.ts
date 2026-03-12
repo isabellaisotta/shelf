@@ -32,7 +32,7 @@ export async function GET() {
       title: i.title,
       creator: i.creator,
       source: (i.source as string) || "Added by you",
-      source_type: (i.source as string)?.startsWith("AI pick") ? "ai" : "self",
+      source_type: (i.source as string)?.startsWith("AI pick") ? "ai" : (i.source as string)?.startsWith("From ") ? "from-shelf" : "self",
       notes: (i.notes as string) || "",
       created_at: i.created_at,
       table: "recommended" as const,
