@@ -230,25 +230,34 @@ function ThreadContent() {
 
           {/* Compose */}
           <div className="bg-surface rounded-xl border border-border p-4">
-            {/* Recipient pills */}
-            <div className="flex flex-wrap gap-2 mb-3">
-              {friends.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => toggleRecipient(f.id)}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
-                    selectedRecipients.includes(f.id)
-                      ? "bg-coral text-white border-coral"
-                      : "bg-surface-hover text-muted border-border hover:border-coral/40"
-                  }`}
-                >
-                  {f.display_name || f.username}
-                </button>
-              ))}
-              {friends.length === 0 && (
-                <p className="text-xs text-muted-light">Add friends to start messaging</p>
-              )}
-            </div>
+            {/* Recipient pills - locked when in a specific friend's thread */}
+            {friendId && friendProfile ? (
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs text-muted-light">To:</span>
+                <span className="text-xs px-3 py-1.5 rounded-full bg-coral text-white border border-coral">
+                  {friendProfile.display_name || friendProfile.username}
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {friends.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => toggleRecipient(f.id)}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                      selectedRecipients.includes(f.id)
+                        ? "bg-coral text-white border-coral"
+                        : "bg-surface-hover text-muted border-border hover:border-coral/40"
+                    }`}
+                  >
+                    {f.display_name || f.username}
+                  </button>
+                ))}
+                {friends.length === 0 && (
+                  <p className="text-xs text-muted-light">Add friends to start messaging</p>
+                )}
+              </div>
+            )}
 
             {/* Message input */}
             <div className="flex gap-2">
