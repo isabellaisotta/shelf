@@ -22,6 +22,8 @@ interface ActivityItem {
   creator: string;
   category: string;
   cover_url: string;
+  external_id: string;
+  year: string;
   created_at: string;
   friend: { id: string; username: string; display_name: string };
 }
@@ -37,6 +39,8 @@ export default function DiscoverPage() {
   const [loadingRec, setLoadingRec] = useState(true);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [savingPick, setSavingPick] = useState<string | null>(null);
+  const [savingActivity, setSavingActivity] = useState<string | null>(null);
+  const [savedActivity, setSavedActivity] = useState<Set<string>>(new Set());
 
   const loadData = useCallback(async () => {
     const [recRes, activityRes] = await Promise.all([
@@ -122,6 +126,37 @@ export default function DiscoverPage() {
     }
     setTimeout(() => setToast(null), 3000);
     setSavingPick(null);
+  }
+
+  async function saveActivityItem(item: ActivityItem) {
+    const key = `${item.title}|${item.category}`;
+    setSavingActivity(key);
+    const res = await fetch("/api/items", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        category: item.category,
+        title: item.title,
+        creator: item.creator,
+        year: item.year,
+        coverUrl: item.cover_url,
+        externalId: item.external_id,
+      }),
+    });
+    if (res.ok) {
+      setToast(`Added "${item.title}" to your shelf`);
+      setSavedActivity((prev) => new Set(prev).add(key));
+    } else {
+      const data = await res.json();
+      if (data.error?.includes("duplicate") || res.status === 409) {
+        setToast("Already on your shelf");
+        setSavedActivity((prev) => new Set(prev).add(key));
+      } else {
+        setToast(data.error || "Failed to add");
+      }
+    }
+    setTimeout(() => setToast(null), 3000);
+    setSavingActivity(null);
   }
 
   if (loading || !user) return null;
@@ -266,7 +301,7 @@ export default function DiscoverPage() {
             {activity.map((item, i) => (
               <div
                 key={i}
-                className="bg-surface rounded-xl border border-border p-4 hover:border-coral/30 transition-colors"
+                className="group bg-surface rounded-xl border border-border p-4 hover:border-coral/30 transition-colors"
               >
                 <div className="flex items-center gap-4">
                   {item.cover_url ? (
@@ -300,6 +335,17 @@ export default function DiscoverPage() {
                       <span className="text-xs text-muted-light">{timeAgo(item.created_at)}</span>
                     </div>
                   </div>
+                  <button
+                    onClick={() => saveActivityItem(item)}
+                    disabled={savingActivity === `${item.title}|${item.category}` || savedActivity.has(`${item.title}|${item.category}`)}
+                    className={`flex-shrink-0 px-3 py-1.5 text-xs rounded-lg transition-colors border ${
+                      savedActivity.has(`${item.title}|${item.category}`)
+                        ? "bg-surface-hover text-muted-light border-border"
+                        : "text-coral hover:bg-coral hover:text-white border-coral/30 opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    {savedActivity.has(`${item.title}|${item.category}`) ? "Saved" : "+ Save"}
+                  </button>
                 </div>
               </div>
             ))}

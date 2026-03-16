@@ -239,7 +239,7 @@ function CompareContent() {
             activeTab === "matches" ? "bg-coral text-white" : "bg-surface text-muted border border-border hover:text-foreground"
           }`}
         >
-          Matches ({data.stats.totalMatches})
+          Matches
         </button>
         <button
           onClick={() => setActiveTab("shelf")}

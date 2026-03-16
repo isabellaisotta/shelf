@@ -24,7 +24,7 @@ export async function GET() {
   // Get recent items from friends
   const { data: items } = await supabase
     .from("items")
-    .select("id, title, creator, category, cover_url, created_at, user_id")
+    .select("id, title, creator, category, cover_url, external_id, year, created_at, user_id")
     .in("user_id", friendIds)
     .order("created_at", { ascending: false })
     .limit(20);
@@ -47,6 +47,8 @@ export async function GET() {
     creator: i.creator,
     category: i.category,
     cover_url: i.cover_url,
+    external_id: i.external_id || "",
+    year: i.year || "",
     created_at: i.created_at,
     friend: {
       id: i.user_id,

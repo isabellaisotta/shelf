@@ -102,6 +102,7 @@ create index idx_recommended_user on public.recommended(user_id);
 create index idx_match_recs_user on public.match_recommendations(user_id, friend_id);
 create index idx_items_user on public.items(user_id);
 create index idx_items_category on public.items(user_id, category);
+create index idx_items_external_id on public.items(external_id);
 create index idx_friendships_addressee on public.friendships(addressee_id);
 create index idx_messages_item on public.messages(item_id);
 create index idx_messages_author on public.messages(author_id);

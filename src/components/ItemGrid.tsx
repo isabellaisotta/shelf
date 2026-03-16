@@ -11,6 +11,7 @@ interface Item {
   year: string;
   cover_url: string;
   rank: number;
+  external_id?: string;
 }
 
 interface Friend {
@@ -303,20 +304,30 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
                 {addedItems?.has(item.id) ? "Saved" : "+ Save"}
               </button>
             )}
-            {item.cover_url ? (
-              <img src={item.cover_url} alt={item.title} className="w-full h-48 object-cover" draggable={false} />
-            ) : (
-              <div className="w-full h-48 bg-surface-hover flex items-center justify-center">
-                <span className="text-muted text-sm">{categoryLabel.slice(0, -1)}</span>
+            <div
+              className={item.external_id ? "cursor-pointer" : ""}
+              onClick={() => {
+                if (item.external_id) {
+                  router.push(`/media/${item.category}/${item.external_id}`);
+                }
+              }}
+            >
+              {item.cover_url ? (
+                <img src={item.cover_url} alt={item.title} className="w-full h-48 object-cover" draggable={false} />
+              ) : (
+                <div className="w-full h-48 bg-surface-hover flex items-center justify-center">
+                  <span className="text-muted text-sm">{categoryLabel.slice(0, -1)}</span>
+                </div>
+              )}
+              <div className="p-3">
+                <h3 className="font-medium text-sm text-foreground line-clamp-2">{item.title}</h3>
+                {item.creator && <p className="text-xs text-muted mt-1">{item.creator}</p>}
+                {item.year && <p className="text-xs text-muted-light">{item.year}</p>}
               </div>
-            )}
-            <div className="p-3">
-              <h3 className="font-medium text-sm text-foreground line-clamp-2">{item.title}</h3>
-              {item.creator && <p className="text-xs text-muted mt-1">{item.creator}</p>}
-              {item.year && <p className="text-xs text-muted-light">{item.year}</p>}
-
+            </div>
+            <div className="px-3 pb-3">
               {/* Action buttons - always visible on hover */}
-              <div className="flex gap-1.5 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={(e) => { e.stopPropagation(); openRecommendModal(item); }}
                   className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-lg bg-coral-muted text-coral hover:bg-coral hover:text-white transition-all"
