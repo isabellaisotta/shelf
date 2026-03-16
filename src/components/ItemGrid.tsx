@@ -151,15 +151,22 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
   async function sendMessage() {
     if (!messageItem || !newMessage.trim() || selectedRecipients.length === 0) return;
     setSending(true);
-    const res = await fetch("/api/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemId: messageItem.id, body: newMessage.trim(), recipientIds: selectedRecipients }),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      setMessages((prev) => [...prev, data.message]);
-      setNewMessage("");
+    try {
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId: messageItem.id, body: newMessage.trim(), recipientIds: selectedRecipients }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setMessages((prev) => [...prev, data.message]);
+        setNewMessage("");
+      } else {
+        alert(`Send failed: ${data.error || "Unknown error"}`);
+      }
+    } catch (err) {
+      alert("Send error - check console");
+      console.error(err);
     }
     setSending(false);
   }

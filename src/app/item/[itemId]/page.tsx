@@ -108,16 +108,22 @@ export default function ThreadPage() {
     if (!newMessage.trim() || selectedRecipients.length === 0) return;
     setSending(true);
 
-    const res = await fetch("/api/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemId, body: newMessage.trim(), recipientIds: selectedRecipients }),
-    });
-    const data = await res.json();
+    try {
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId, body: newMessage.trim(), recipientIds: selectedRecipients }),
+      });
+      const data = await res.json();
 
-    if (data.ok) {
-      setMessages((prev) => [...prev, data.message]);
-      setNewMessage("");
+      if (data.ok) {
+        setMessages((prev) => [...prev, data.message]);
+        setNewMessage("");
+      } else {
+        alert(`Send failed: ${data.error || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error("Send error:", err);
     }
     setSending(false);
   }
