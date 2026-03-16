@@ -13,12 +13,12 @@ interface PendingRec {
   status: string;
 }
 
-interface IncomingComment {
+interface IncomingMessage {
   id: string;
   body: string;
   created_at: string;
-  friend: { username: string; display_name: string };
-  item: { id: string; title: string; category: string };
+  author: { username: string; display_name: string };
+  item: { id: string; title: string; category: string; cover_url: string };
 }
 
 interface Nudge {
@@ -34,21 +34,21 @@ export default function IncomingPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [pendingRecs, setPendingRecs] = useState<PendingRec[]>([]);
-  const [comments, setComments] = useState<IncomingComment[]>([]);
+  const [messages, setMessages] = useState<IncomingMessage[]>([]);
   const [nudges, setNudges] = useState<Nudge[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   const loadData = useCallback(async () => {
     setLoadingData(true);
-    const [recsRes, commentsRes, nudgesRes] = await Promise.all([
+    const [recsRes, messagesRes, nudgesRes] = await Promise.all([
       fetch("/api/recommended"),
-      fetch("/api/incoming/comments"),
+      fetch("/api/messages/incoming"),
       fetch("/api/incoming/nudges"),
     ]);
 
-    const [recsData, commentsData, nudgesData] = await Promise.all([
+    const [recsData, messagesData, nudgesData] = await Promise.all([
       recsRes.json(),
-      commentsRes.json(),
+      messagesRes.json(),
       nudgesRes.json(),
     ]);
 
@@ -57,7 +57,7 @@ export default function IncomingPage() {
       (i: PendingRec) => i.source.startsWith("Recommended by") && i.status === "pending"
     );
     setPendingRecs(pending);
-    setComments(commentsData.comments || []);
+    setMessages(messagesData.messages || []);
     setNudges(nudgesData.nudges || []);
     setLoadingData(false);
   }, []);
@@ -88,7 +88,7 @@ export default function IncomingPage() {
   if (loading || !user) return null;
 
   const totalPending = pendingRecs.length;
-  const isEmpty = pendingRecs.length === 0 && comments.length === 0 && nudges.length === 0;
+  const isEmpty = pendingRecs.length === 0 && messages.length === 0 && nudges.length === 0;
 
   function categoryBadge(category: string) {
     return category === "book" ? "BK" : category === "film" ? "FM" : "TV";
@@ -173,6 +173,43 @@ export default function IncomingPage() {
             </div>
           )}
 
+          {/* Messages */}
+          {messages.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-sm font-medium text-muted uppercase tracking-wide mb-3">
+                Messages
+              </h2>
+              <div className="space-y-2">
+                {messages.map((m) => (
+                  <div
+                    key={m.id}
+                    onClick={() => router.push(`/item/${m.item.id}`)}
+                    className="bg-surface rounded-xl border border-border p-4 hover:border-coral/30 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-coral-muted flex items-center justify-center">
+                        <span className="text-coral text-xs font-bold">
+                          {(m.author.display_name || m.author.username)[0].toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-foreground text-sm">
+                            {m.author.display_name || m.author.username}
+                          </span>
+                          <span className="text-muted-light text-xs">messaged you about</span>
+                          <span className="text-coral text-sm font-medium">{m.item.title}</span>
+                          <span className="text-muted-light text-xs">{timeAgo(m.created_at)}</span>
+                        </div>
+                        <p className="text-sm text-muted mt-1 truncate">{m.body}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* AI Nudges */}
           {nudges.length > 0 && (
             <div className="mb-6">
@@ -209,42 +246,6 @@ export default function IncomingPage() {
                           <span className="text-xs text-muted-light capitalize">{nudge.category}</span>
                         </div>
                         <p className="text-xs text-coral mt-1">{nudge.reason}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Comments on Your Items */}
-          {comments.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-sm font-medium text-muted uppercase tracking-wide mb-3">
-                Comments on Your Items
-              </h2>
-              <div className="space-y-2">
-                {comments.map((c) => (
-                  <div
-                    key={c.id}
-                    className="bg-surface rounded-xl border border-border p-4 hover:border-coral/30 transition-colors"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-coral-muted flex items-center justify-center">
-                        <span className="text-coral text-xs font-bold">
-                          {(c.friend.display_name || c.friend.username)[0].toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-foreground text-sm">
-                            {c.friend.display_name || c.friend.username}
-                          </span>
-                          <span className="text-muted-light text-xs">commented on</span>
-                          <span className="text-coral text-sm font-medium">{c.item.title}</span>
-                          <span className="text-muted-light text-xs">{timeAgo(c.created_at)}</span>
-                        </div>
-                        <p className="text-sm text-muted mt-1">{c.body}</p>
                       </div>
                     </div>
                   </div>

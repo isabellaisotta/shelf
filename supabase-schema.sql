@@ -34,13 +34,22 @@ create table public.friendships (
   unique(requester_id, addressee_id)
 );
 
--- Comments
-create table public.comments (
+-- Messages (private, item-anchored conversations)
+create table public.messages (
   id uuid default gen_random_uuid() primary key,
   item_id uuid references public.items(id) on delete cascade not null,
   author_id uuid references public.profiles(id) on delete cascade not null,
   body text not null,
   created_at timestamptz default now()
+);
+
+-- Message recipients (who can see each message)
+create table public.message_recipients (
+  id uuid default gen_random_uuid() primary key,
+  message_id uuid references public.messages(id) on delete cascade not null,
+  recipient_id uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  unique(message_id, recipient_id)
 );
 
 -- Recommended items (saved from AI recommendations)
@@ -94,7 +103,10 @@ create index idx_match_recs_user on public.match_recommendations(user_id, friend
 create index idx_items_user on public.items(user_id);
 create index idx_items_category on public.items(user_id, category);
 create index idx_friendships_addressee on public.friendships(addressee_id);
-create index idx_comments_item on public.comments(item_id);
+create index idx_messages_item on public.messages(item_id);
+create index idx_messages_author on public.messages(author_id);
+create index idx_message_recipients_recipient on public.message_recipients(recipient_id);
+create index idx_message_recipients_message on public.message_recipients(message_id);
 create index idx_friend_recs_to on public.friend_recommendations(to_user_id);
 create index idx_friend_recs_from on public.friend_recommendations(from_user_id);
 
@@ -108,7 +120,8 @@ alter table public.recommended enable row level security;
 alter table public.match_recommendations enable row level security;
 alter table public.friend_recommendations enable row level security;
 alter table public.personal_recommendations enable row level security;
-alter table public.comments enable row level security;
+alter table public.messages enable row level security;
+alter table public.message_recipients enable row level security;
 
 -- Profiles: anyone can read, only own profile can update
 create policy "Profiles are viewable by everyone" on public.profiles
@@ -168,11 +181,27 @@ create policy "Recipient can delete recs" on public.friend_recommendations
 create policy "Users can manage own personal recs" on public.personal_recommendations
   for all using (auth.uid() = user_id);
 
--- Comments: anyone can read (on items they can see), logged-in users can post
-create policy "Comments are viewable by everyone" on public.comments
-  for select using (true);
-create policy "Logged-in users can post comments" on public.comments
+-- Messages: visible to author or any recipient
+create policy "Authors can see own messages" on public.messages
+  for select using (auth.uid() = author_id);
+create policy "Recipients can see messages" on public.messages
+  for select using (
+    exists (select 1 from public.message_recipients where message_id = id and recipient_id = auth.uid())
+  );
+create policy "Users can send messages" on public.messages
   for insert with check (auth.uid() = author_id);
+
+-- Message recipients: visible to the recipient or the message author
+create policy "Recipients can see own entries" on public.message_recipients
+  for select using (auth.uid() = recipient_id);
+create policy "Authors can see recipient entries" on public.message_recipients
+  for select using (
+    exists (select 1 from public.messages where id = message_id and author_id = auth.uid())
+  );
+create policy "Authors can add recipients" on public.message_recipients
+  for insert with check (
+    exists (select 1 from public.messages where id = message_id and author_id = auth.uid())
+  );
 
 -- Auto-create profile on signup
 create or replace function public.handle_new_user()
