@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback, Suspense } from "react";
 import ItemGrid from "@/components/ItemGrid";
 import MediaSearch from "@/components/MediaSearch";
 import { useUserLibrary } from "@/hooks/useUserLibrary";
+import { Item } from "@/types/item";
 
 interface Match {
   title: string;
@@ -15,16 +16,6 @@ interface Match {
   myRank: number;
   theirRank: number;
   closeness: number;
-}
-
-interface Item {
-  id: string;
-  category: string;
-  title: string;
-  creator: string;
-  year: string;
-  cover_url: string;
-  rank: number;
 }
 
 interface MatchData {

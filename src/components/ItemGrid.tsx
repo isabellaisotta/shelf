@@ -3,17 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUserLibrary } from "@/hooks/useUserLibrary";
-
-interface Item {
-  id: string;
-  category: string;
-  title: string;
-  creator: string;
-  year: string;
-  cover_url: string;
-  rank: number;
-  external_id?: string;
-}
+import { Item } from "@/types/item";
 
 interface Friend {
   id: string;

@@ -5,16 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import MediaSearch from "@/components/MediaSearch";
 import ItemGrid from "@/components/ItemGrid";
-
-interface Item {
-  id: string;
-  category: string;
-  title: string;
-  creator: string;
-  year: string;
-  cover_url: string;
-  rank: number;
-}
+import { Item } from "@/types/item";
 
 type Category = "book" | "film" | "tv";
 
