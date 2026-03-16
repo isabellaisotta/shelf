@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback } from "react";
 
 interface Conversation {
   item: { id: string; title: string; category: string; cover_url: string };
+  otherPerson: { id: string; display_name: string };
   lastMessage: { body: string; created_at: string; author: { display_name: string } };
   messageCount: number;
 }
@@ -48,8 +49,8 @@ export default function ConversationsPage() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
       <div className="bg-surface rounded-xl border border-border p-6 mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Conversations</h1>
-        <p className="text-sm text-muted mt-1">Your message threads about books, films, and shows</p>
+        <h1 className="text-2xl font-bold text-foreground">Messages</h1>
+        <p className="text-sm text-muted mt-1">Your conversations about books, films, and shows</p>
       </div>
 
       {loadingData ? (
@@ -61,9 +62,9 @@ export default function ConversationsPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {conversations.map((conv) => (
+          {conversations.map((conv, i) => (
             <div
-              key={conv.item.id}
+              key={`${conv.item.id}-${conv.otherPerson.id}`}
               onClick={() => router.push(`/item/${conv.item.id}`)}
               className="bg-surface rounded-xl border border-border p-4 hover:border-coral/30 transition-colors cursor-pointer"
             >
@@ -87,6 +88,7 @@ export default function ConversationsPage() {
                     <span className="text-xs px-1.5 py-0.5 rounded bg-coral-muted text-coral font-medium uppercase">
                       {categoryBadge(conv.item.category)}
                     </span>
+                    <span className="text-xs text-muted-light">with {conv.otherPerson.display_name}</span>
                   </div>
                   <p className="text-sm text-muted mt-0.5 truncate">
                     <span className="font-medium">{conv.lastMessage.author.display_name}:</span>{" "}

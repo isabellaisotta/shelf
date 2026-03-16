@@ -29,7 +29,7 @@ export async function GET() {
     recipientMessages = data || [];
   }
 
-  // Merge and deduplicate
+  // Merge and deduplicate messages
   const allMessages = [...(authoredMessages || []), ...(recipientMessages || [])];
   const uniqueMap = new Map(allMessages.map((m) => [m.id, m]));
   const messages = Array.from(uniqueMap.values());
@@ -38,44 +38,88 @@ export async function GET() {
     return NextResponse.json({ conversations: [] });
   }
 
-  // Group by item_id
-  const itemGroups = new Map<string, typeof messages>();
+  // Get all recipients for all messages
+  const messageIds = messages.map((m) => m.id);
+  const { data: allRecipients } = await supabase
+    .from("message_recipients")
+    .select("message_id, recipient_id")
+    .in("message_id", messageIds);
+
+  // Build a map: message_id -> recipient_ids
+  const msgRecipientMap = new Map<string, string[]>();
+  for (const r of allRecipients || []) {
+    const list = msgRecipientMap.get(r.message_id) || [];
+    list.push(r.recipient_id);
+    msgRecipientMap.set(r.message_id, list);
+  }
+
+  // For each message, determine the "other person" from my perspective
+  // If I sent it: the other person is the recipient(s)
+  // If I received it: the other person is the author
+  // Group by item_id + other_person_id
+  const conversationGroups = new Map<string, typeof messages>();
+
   for (const m of messages) {
-    const group = itemGroups.get(m.item_id) || [];
-    group.push(m);
-    itemGroups.set(m.item_id, group);
+    const recipients = msgRecipientMap.get(m.id) || [];
+
+    if (m.author_id === user.id) {
+      // I sent this - create a conversation per recipient
+      for (const rid of recipients) {
+        const key = `${m.item_id}:${rid}`;
+        const group = conversationGroups.get(key) || [];
+        group.push(m);
+        conversationGroups.set(key, group);
+      }
+    } else {
+      // I received this - the other person is the author
+      const key = `${m.item_id}:${m.author_id}`;
+      const group = conversationGroups.get(key) || [];
+      group.push(m);
+      conversationGroups.set(key, group);
+    }
   }
 
   // Get item details
-  const itemIds = [...itemGroups.keys()];
+  const itemIds = [...new Set(messages.map((m) => m.item_id))];
   const { data: items } = await supabase
     .from("items")
     .select("id, title, category, cover_url")
     .in("id", itemIds);
   const itemMap = new Map((items || []).map((i) => [i.id, i]));
 
-  // Get author profiles for last messages
-  const authorIds = [...new Set(messages.map((m) => m.author_id))];
+  // Get all relevant profiles
+  const allPersonIds = new Set<string>();
+  for (const m of messages) {
+    allPersonIds.add(m.author_id);
+  }
+  for (const r of allRecipients || []) {
+    allPersonIds.add(r.recipient_id);
+  }
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, username, display_name")
-    .in("id", authorIds);
+    .in("id", [...allPersonIds]);
   const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
 
   // Build conversations
-  const conversations = itemIds.map((itemId) => {
-    const group = itemGroups.get(itemId)!;
+  const conversations = [...conversationGroups.entries()].map(([key, group]) => {
+    const [itemId, otherPersonId] = key.split(":");
     const sorted = group.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     const lastMsg = sorted[0];
-    const author = profileMap.get(lastMsg.author_id);
+    const lastMsgAuthor = profileMap.get(lastMsg.author_id);
+    const otherPerson = profileMap.get(otherPersonId);
     const item = itemMap.get(itemId);
 
     return {
       item: item || { id: itemId, title: "Unknown", category: "book", cover_url: "" },
+      otherPerson: {
+        id: otherPersonId,
+        display_name: otherPerson?.display_name || otherPerson?.username || "Unknown",
+      },
       lastMessage: {
         body: lastMsg.body,
         created_at: lastMsg.created_at,
-        author: { display_name: author?.display_name || author?.username || "Unknown" },
+        author: { display_name: lastMsgAuthor?.display_name || lastMsgAuthor?.username || "Unknown" },
       },
       messageCount: group.length,
     };
