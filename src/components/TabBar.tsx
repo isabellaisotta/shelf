@@ -7,7 +7,8 @@ import { useAuth } from "./AuthContext";
 const tabs = [
   { label: "My Trove", href: "/trove", icon: "📚" },
   { label: "Explore", href: "/explore", icon: "🔍" },
-  { label: "Social", href: "/social", icon: "👥" },
+  { label: "Messages", href: "/messages", icon: "💬" },
+  { label: "Friends", href: "/social", icon: "👥" },
 ];
 
 export default function TabBar() {

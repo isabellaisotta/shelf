@@ -6,7 +6,6 @@ export default function SocialLayout({ children }: { children: React.ReactNode }
       <SubNav
         items={[
           { label: "My People", href: "/social/people" },
-          { label: "Conversations", href: "/social/conversations" },
           { label: "My Groups", href: "/social/groups" },
         ]}
         defaultHref="/social/people"
