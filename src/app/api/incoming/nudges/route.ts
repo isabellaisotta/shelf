@@ -24,7 +24,7 @@ export async function GET() {
   // Get my items and friend items in parallel
   const [myResult, friendResult, profileResult] = await Promise.all([
     supabase.from("items").select("title, category, creator, cover_url").eq("user_id", user.id),
-    supabase.from("items").select("title, category, creator, cover_url, user_id").in("user_id", friendIds),
+    supabase.from("items").select("title, category, creator, cover_url, external_id, user_id").in("user_id", friendIds),
     supabase.from("profiles").select("id, username, display_name").in("id", friendIds),
   ]);
 
@@ -65,6 +65,7 @@ export async function GET() {
     creator: string;
     category: string;
     cover_url: string;
+    external_id: string;
     friends: string[];
     sharedCount: number;
   }>();
@@ -80,6 +81,7 @@ export async function GET() {
         creator: item.creator,
         category: item.category,
         cover_url: item.cover_url,
+        external_id: item.external_id || "",
         friends: [],
         sharedCount: 0,
       });
@@ -112,6 +114,7 @@ export async function GET() {
       creator: n.creator,
       category: n.category,
       cover_url: n.cover_url,
+      external_id: n.external_id,
       reason,
       friends: friendNames,
     };

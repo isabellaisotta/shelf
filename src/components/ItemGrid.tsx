@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useUserLibrary } from "@/hooks/useUserLibrary";
 
 interface Item {
   id: string;
@@ -65,6 +66,7 @@ function ChatIcon() {
 
 export default function ItemGrid({ items, category, editable = false, onDelete, onReorder, showComments = false, onAdd, addedItems, onRecommend }: Props) {
   const router = useRouter();
+  const library = useUserLibrary();
 
   // Drag state
   const dragItem = useRef<number | null>(null);
@@ -291,19 +293,32 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
                 x
               </button>
             )}
-            {onAdd && (
-              <button
-                onClick={(e) => { e.stopPropagation(); if (!addedItems?.has(item.id)) onAdd(item); }}
-                disabled={addedItems?.has(item.id)}
-                className={`absolute top-2 right-2 text-xs font-medium px-2 py-1 rounded-lg z-10 transition-all ${
-                  addedItems?.has(item.id)
-                    ? "bg-surface-hover text-muted-light opacity-100"
-                    : "bg-coral-muted text-coral hover:bg-coral hover:text-white opacity-0 group-hover:opacity-100"
-                }`}
-              >
-                {addedItems?.has(item.id) ? "In Trove" : "+ Trove"}
-              </button>
-            )}
+            {onAdd && (() => {
+              const status = library.statusLabel(item.title, item.category);
+              const isAdded = addedItems?.has(item.id);
+              if (status) {
+                return (
+                  <span className="absolute top-2 right-2 text-xs font-medium px-2 py-1 rounded-lg z-10 bg-surface-hover text-muted-light opacity-100 border border-border">
+                    {status}
+                  </span>
+                );
+              }
+              if (isAdded) {
+                return (
+                  <span className="absolute top-2 right-2 text-xs font-medium px-2 py-1 rounded-lg z-10 bg-surface-hover text-muted-light opacity-100">
+                    Added
+                  </span>
+                );
+              }
+              return (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onAdd(item); }}
+                  className="absolute top-2 right-2 text-xs font-medium px-2 py-1 rounded-lg z-10 transition-all bg-coral-muted text-coral hover:bg-coral hover:text-white opacity-0 group-hover:opacity-100"
+                >
+                  + Up Next
+                </button>
+              );
+            })()}
             <div
               className={item.external_id ? "cursor-pointer" : ""}
               onClick={() => {

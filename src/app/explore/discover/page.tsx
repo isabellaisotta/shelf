@@ -4,6 +4,7 @@ import { useAuth } from "@/components/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import MediaSearch from "@/components/MediaSearch";
+import { useUserLibrary } from "@/hooks/useUserLibrary";
 
 interface Pick {
   title: string;
@@ -40,7 +41,7 @@ export default function DiscoverPage() {
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [savingPick, setSavingPick] = useState<string | null>(null);
   const [savingActivity, setSavingActivity] = useState<string | null>(null);
-  const [savedActivity, setSavedActivity] = useState<Set<string>>(new Set());
+  const library = useUserLibrary();
 
   const loadData = useCallback(async () => {
     const [recRes, activityRes] = await Promise.all([
@@ -77,12 +78,11 @@ export default function DiscoverPage() {
       }),
     });
     if (res.ok) {
-      setToast(`Added "${result.title}" to Up Next`);
-      setTimeout(() => setToast(null), 3000);
+      showToast(`Added "${result.title}" to Up Next`);
+      library.refresh();
     } else {
       const data = await res.json();
-      setToast(data.error || "Failed to add");
-      setTimeout(() => setToast(null), 3000);
+      showToast(data.error || "Failed to add");
     }
   }
 
@@ -92,70 +92,96 @@ export default function DiscoverPage() {
       const res = await fetch("/api/recommend/personal", { method: "POST" });
       const data = await res.json();
       if (data.error) {
-        setToast(data.error);
-        setTimeout(() => setToast(null), 3000);
+        showToast(data.error);
       } else {
         setPersonalRec(data.recommendation);
         setRecTimestamp(data.created_at);
       }
     } catch {
-      setToast("Failed to generate recommendations");
-      setTimeout(() => setToast(null), 3000);
+      showToast("Failed to generate recommendations");
     }
     setGenerating(false);
   }
 
-  async function savePick(pick: Pick) {
-    const key = `${pick.title}|${pick.category}`;
-    setSavingPick(key);
-    const res = await fetch("/api/recommended", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        category: pick.category,
-        title: pick.title,
-        creator: pick.creator,
-        source: "AI pick for you",
-      }),
-    });
-    if (res.ok) {
-      setToast(`Added "${pick.title}" to Up Next`);
-    } else {
-      const data = await res.json();
-      setToast(data.error || "Failed to save");
-    }
+  function showToast(msg: string) {
+    setToast(msg);
     setTimeout(() => setToast(null), 3000);
+  }
+
+  async function savePickToUpNext(pick: Pick) {
+    const key = `${pick.title}|${pick.category}`;
+    setSavingPick(key + ":upnext");
+    const result = await library.addToUpNext({
+      category: pick.category,
+      title: pick.title,
+      creator: pick.creator,
+      source: "AI pick for you",
+    });
+    if (result.ok) {
+      showToast(`Added "${pick.title}" to Up Next`);
+    } else if (result.alreadyExists) {
+      showToast("Already in Up Next");
+    } else {
+      showToast(result.error || "Failed to save");
+    }
     setSavingPick(null);
   }
 
-  async function saveActivityItem(item: ActivityItem) {
-    const key = `${item.title}|${item.category}`;
-    setSavingActivity(key);
-    const res = await fetch("/api/items", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        category: item.category,
-        title: item.title,
-        creator: item.creator,
-        year: item.year,
-        coverUrl: item.cover_url,
-        externalId: item.external_id,
-      }),
+  async function savePickToTrove(pick: Pick) {
+    const key = `${pick.title}|${pick.category}`;
+    setSavingPick(key + ":trove");
+    const result = await library.addToTrove({
+      category: pick.category,
+      title: pick.title,
+      creator: pick.creator,
     });
-    if (res.ok) {
-      setToast(`Added "${item.title}" to your Trove`);
-      setSavedActivity((prev) => new Set(prev).add(key));
+    if (result.ok) {
+      showToast(`Added "${pick.title}" to your Trove`);
+    } else if (result.alreadyExists) {
+      showToast("Already in your Trove");
     } else {
-      const data = await res.json();
-      if (data.error?.includes("duplicate") || res.status === 409) {
-        setToast("Already in your Trove");
-        setSavedActivity((prev) => new Set(prev).add(key));
-      } else {
-        setToast(data.error || "Failed to add");
-      }
+      showToast(result.error || "Failed to add");
     }
-    setTimeout(() => setToast(null), 3000);
+    setSavingPick(null);
+  }
+
+  async function saveActivityToTrove(item: ActivityItem) {
+    const key = `${item.title}|${item.category}`;
+    setSavingActivity(key + ":trove");
+    const result = await library.addToTrove({
+      category: item.category,
+      title: item.title,
+      creator: item.creator,
+      year: item.year,
+      coverUrl: item.cover_url,
+      externalId: item.external_id,
+    });
+    if (result.ok) {
+      showToast(`Added "${item.title}" to your Trove`);
+    } else if (result.alreadyExists) {
+      showToast("Already in your Trove");
+    } else {
+      showToast(result.error || "Failed to add");
+    }
+    setSavingActivity(null);
+  }
+
+  async function saveActivityToUpNext(item: ActivityItem) {
+    const key = `${item.title}|${item.category}`;
+    setSavingActivity(key + ":upnext");
+    const result = await library.addToUpNext({
+      category: item.category,
+      title: item.title,
+      creator: item.creator,
+      source: `From ${item.friend.display_name || item.friend.username}'s activity`,
+    });
+    if (result.ok) {
+      showToast(`Added "${item.title}" to Up Next`);
+    } else if (result.alreadyExists) {
+      showToast("Already in Up Next");
+    } else {
+      showToast(result.error || "Failed to add");
+    }
     setSavingActivity(null);
   }
 
@@ -244,34 +270,55 @@ export default function DiscoverPage() {
           <>
             <p className="text-sm text-muted italic mb-4">{personalRec.taste_profile}</p>
             <div className="space-y-2">
-              {personalRec.picks.map((pick, i) => (
-                <div
-                  key={i}
-                  className="group flex items-center gap-4 py-3 px-3 rounded-lg hover:bg-surface-hover transition-colors"
-                >
-                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-coral-muted flex items-center justify-center">
-                    <span className="text-coral text-xs font-bold uppercase">
-                      {categoryBadge(pick.category)}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-foreground text-sm">{pick.title}</div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {pick.creator && <span className="text-xs text-muted">{pick.creator}</span>}
-                      {pick.creator && <span className="text-muted-light">·</span>}
-                      <span className="text-xs text-muted-light capitalize">{pick.category}</span>
-                    </div>
-                    <p className="text-xs text-muted-light mt-0.5">{pick.reason}</p>
-                  </div>
-                  <button
-                    onClick={() => savePick(pick)}
-                    disabled={savingPick === `${pick.title}|${pick.category}`}
-                    className="px-3 py-1.5 text-xs text-coral hover:bg-coral hover:text-white rounded-lg transition-colors border border-coral/30 opacity-0 group-hover:opacity-100"
+              {personalRec.picks.map((pick, i) => {
+                const status = library.statusLabel(pick.title, pick.category);
+                const pickKey = `${pick.title}|${pick.category}`;
+                return (
+                  <div
+                    key={i}
+                    className="group flex items-center gap-4 py-3 px-3 rounded-lg hover:bg-surface-hover transition-colors"
                   >
-                    + Up Next
-                  </button>
-                </div>
-              ))}
+                    <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-coral-muted flex items-center justify-center">
+                      <span className="text-coral text-xs font-bold uppercase">
+                        {categoryBadge(pick.category)}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-foreground text-sm">{pick.title}</div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {pick.creator && <span className="text-xs text-muted">{pick.creator}</span>}
+                        {pick.creator && <span className="text-muted-light">·</span>}
+                        <span className="text-xs text-muted-light capitalize">{pick.category}</span>
+                      </div>
+                      <p className="text-xs text-muted-light mt-0.5">{pick.reason}</p>
+                    </div>
+                    <div className="flex-shrink-0 flex gap-1.5">
+                      {status ? (
+                        <span className="px-3 py-1.5 text-xs text-muted-light bg-surface-hover rounded-lg border border-border">
+                          {status}
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => savePickToTrove(pick)}
+                            disabled={savingPick === pickKey + ":trove"}
+                            className="px-3 py-1.5 text-xs text-coral hover:bg-coral hover:text-white rounded-lg transition-colors border border-coral/30 opacity-0 group-hover:opacity-100"
+                          >
+                            + Trove
+                          </button>
+                          <button
+                            onClick={() => savePickToUpNext(pick)}
+                            disabled={savingPick === pickKey + ":upnext"}
+                            className="px-3 py-1.5 text-xs text-coral hover:bg-coral hover:text-white rounded-lg transition-colors border border-coral/30 opacity-0 group-hover:opacity-100"
+                          >
+                            + Up Next
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </>
         ) : (
@@ -298,57 +345,90 @@ export default function DiscoverPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {activity.map((item, i) => (
-              <div
-                key={i}
-                className="group bg-surface rounded-xl border border-border p-4 hover:border-coral/30 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  {item.cover_url ? (
-                    <img
-                      src={item.cover_url}
-                      alt=""
-                      className="w-10 h-14 object-cover rounded flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-coral-muted flex items-center justify-center">
-                      <span className="text-coral text-xs font-bold uppercase">
-                        {categoryBadge(item.category)}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground text-sm">
-                        {item.friend.display_name || item.friend.username}
-                      </span>
-                      <span className="text-muted-light text-xs">added</span>
-                    </div>
-                    <div className="font-medium text-foreground mt-0.5">{item.title}</div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {item.creator && (
-                        <span className="text-xs text-muted">{item.creator}</span>
+            {activity.map((item, i) => {
+              const status = library.statusLabel(item.title, item.category);
+              const actKey = `${item.title}|${item.category}`;
+              return (
+                <div
+                  key={i}
+                  className="group bg-surface rounded-xl border border-border p-4 hover:border-coral/30 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={item.external_id ? "cursor-pointer" : ""}
+                      onClick={() => {
+                        if (item.external_id) {
+                          router.push(`/media/${item.category}/${item.external_id}`);
+                        }
+                      }}
+                    >
+                      {item.cover_url ? (
+                        <img
+                          src={item.cover_url}
+                          alt=""
+                          className="w-10 h-14 object-cover rounded flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-coral-muted flex items-center justify-center">
+                          <span className="text-coral text-xs font-bold uppercase">
+                            {categoryBadge(item.category)}
+                          </span>
+                        </div>
                       )}
-                      {item.creator && <span className="text-muted-light">·</span>}
-                      <span className="text-xs text-muted-light capitalize">{item.category}</span>
-                      <span className="text-muted-light">·</span>
-                      <span className="text-xs text-muted-light">{timeAgo(item.created_at)}</span>
+                    </div>
+                    <div
+                      className={`flex-1 min-w-0 ${item.external_id ? "cursor-pointer" : ""}`}
+                      onClick={() => {
+                        if (item.external_id) {
+                          router.push(`/media/${item.category}/${item.external_id}`);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground text-sm">
+                          {item.friend.display_name || item.friend.username}
+                        </span>
+                        <span className="text-muted-light text-xs">added</span>
+                      </div>
+                      <div className="font-medium text-foreground mt-0.5">{item.title}</div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {item.creator && (
+                          <span className="text-xs text-muted">{item.creator}</span>
+                        )}
+                        {item.creator && <span className="text-muted-light">·</span>}
+                        <span className="text-xs text-muted-light capitalize">{item.category}</span>
+                        <span className="text-muted-light">·</span>
+                        <span className="text-xs text-muted-light">{timeAgo(item.created_at)}</span>
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0 flex gap-1.5">
+                      {status ? (
+                        <span className="px-3 py-1.5 text-xs text-muted-light bg-surface-hover rounded-lg border border-border">
+                          {status}
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => saveActivityToTrove(item)}
+                            disabled={savingActivity === actKey + ":trove"}
+                            className="px-3 py-1.5 text-xs text-coral hover:bg-coral hover:text-white rounded-lg transition-colors border border-coral/30 opacity-0 group-hover:opacity-100"
+                          >
+                            + Trove
+                          </button>
+                          <button
+                            onClick={() => saveActivityToUpNext(item)}
+                            disabled={savingActivity === actKey + ":upnext"}
+                            className="px-3 py-1.5 text-xs text-coral hover:bg-coral hover:text-white rounded-lg transition-colors border border-coral/30 opacity-0 group-hover:opacity-100"
+                          >
+                            + Up Next
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => saveActivityItem(item)}
-                    disabled={savingActivity === `${item.title}|${item.category}` || savedActivity.has(`${item.title}|${item.category}`)}
-                    className={`flex-shrink-0 px-3 py-1.5 text-xs rounded-lg transition-colors border ${
-                      savedActivity.has(`${item.title}|${item.category}`)
-                        ? "bg-surface-hover text-muted-light border-border"
-                        : "text-coral hover:bg-coral hover:text-white border-coral/30 opacity-0 group-hover:opacity-100"
-                    }`}
-                  >
-                    {savedActivity.has(`${item.title}|${item.category}`) ? "In Trove" : "+ Trove"}
-                  </button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

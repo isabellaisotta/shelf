@@ -5,6 +5,7 @@ interface Match {
   title: string;
   category: string;
   coverUrl: string;
+  externalId: string;
   myRank: number;
   theirRank: number;
   closeness: number;
@@ -49,6 +50,7 @@ export async function GET(req: NextRequest) {
         title: myItem.title,
         category: myItem.category,
         coverUrl: myItem.cover_url || theirItem.cover_url,
+        externalId: myItem.external_id || theirItem.external_id || "",
         myRank: myItem.rank,
         theirRank: theirItem.rank,
         closeness: myItem.rank + theirItem.rank,

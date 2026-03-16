@@ -5,11 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, Suspense } from "react";
 import ItemGrid from "@/components/ItemGrid";
 import MediaSearch from "@/components/MediaSearch";
+import { useUserLibrary } from "@/hooks/useUserLibrary";
 
 interface Match {
   title: string;
   category: string;
   coverUrl: string;
+  externalId: string;
   myRank: number;
   theirRank: number;
   closeness: number;
@@ -53,6 +55,7 @@ function CompareContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const friendId = searchParams.get("friendId");
+  const library = useUserLibrary();
 
   const [data, setData] = useState<MatchData | null>(null);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
@@ -96,51 +99,63 @@ function CompareContent() {
     }
   }, [user, loading, router, friendId, loadMatch, loadSavedRec]);
 
-  async function addToToConsume(title: string, category: string, creator: string, source?: string) {
-    const key = `${category}:${title}`;
-    if (addedItems.has(key)) return;
-    try {
-      const res = await fetch("/api/recommended", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          category,
-          title,
-          creator,
-          source: source || `AI pick from comparing with ${data?.friend.displayName || data?.friend.username || "friend"}`,
-        }),
-      });
-      if (res.ok || res.status === 409) {
-        setAddedItems((prev) => new Set(prev).add(key));
-      }
-    } catch {
-      // silently fail
-    }
-  }
-
   const [addedShelfItems, setAddedShelfItems] = useState<Set<string>>(new Set());
   const [showSendRec, setShowSendRec] = useState(false);
   const [sendCategory, setSendCategory] = useState<"book" | "film" | "tv">("book");
   const [toast, setToast] = useState<string | null>(null);
+  const [savingRec, setSavingRec] = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  }
+
+  async function addToTrove(title: string, category: string, creator: string) {
+    const key = `${category}:${title}`;
+    setSavingRec(key + ":trove");
+    const result = await library.addToTrove({ category, title, creator });
+    if (result.ok) {
+      showToast(`Added "${title}" to your Trove`);
+      setAddedItems((prev) => new Set(prev).add(key));
+    } else if (result.alreadyExists) {
+      showToast("Already in your Trove");
+      setAddedItems((prev) => new Set(prev).add(key));
+    } else {
+      showToast(result.error || "Failed to add");
+    }
+    setSavingRec(null);
+  }
+
+  async function addToUpNext(title: string, category: string, creator: string, source?: string) {
+    const key = `${category}:${title}`;
+    if (addedItems.has(key)) return;
+    setSavingRec(key + ":upnext");
+    const result = await library.addToUpNext({
+      category,
+      title,
+      creator,
+      source: source || `AI pick from comparing with ${data?.friend.displayName || data?.friend.username || "friend"}`,
+    });
+    if (result.ok || result.alreadyExists) {
+      setAddedItems((prev) => new Set(prev).add(key));
+      if (result.ok) showToast(`Added "${title}" to Up Next`);
+      else showToast("Already in Up Next");
+    } else {
+      showToast(result.error || "Failed to add");
+    }
+    setSavingRec(null);
+  }
 
   async function addFromShelf(item: { id: string; title: string; category: string; creator: string }) {
     const friendName = data?.friend.displayName || data?.friend.username || "friend";
-    try {
-      const res = await fetch("/api/recommended", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          category: item.category,
-          title: item.title,
-          creator: item.creator,
-          source: `From ${friendName}'s trove`,
-        }),
-      });
-      if (res.ok || res.status === 409) {
-        setAddedShelfItems((prev) => new Set(prev).add(item.id));
-      }
-    } catch {
-      // silently fail
+    const result = await library.addToUpNext({
+      category: item.category,
+      title: item.title,
+      creator: item.creator,
+      source: `From ${friendName}'s trove`,
+    });
+    if (result.ok || result.alreadyExists) {
+      setAddedShelfItems((prev) => new Set(prev).add(item.id));
     }
   }
 
@@ -160,15 +175,14 @@ function CompareContent() {
         }),
       });
       if (res.ok) {
-        setToast(`Sent "${result.title}" to ${name}`);
+        showToast(`Sent "${result.title}" to ${name}`);
       } else if (res.status === 409) {
-        setToast(`Already sent "${result.title}" to ${name}`);
+        showToast(`Already sent "${result.title}" to ${name}`);
       }
     } catch {
-      setToast("Failed to send");
+      showToast("Failed to send");
     }
     setShowSendRec(false);
-    setTimeout(() => setToast(null), 3000);
   }
 
   async function generateRecommendation() {
@@ -266,7 +280,15 @@ function CompareContent() {
             <div className="bg-surface rounded-xl border border-border p-6">
               <div className="space-y-3">
                 {data.matches.map((m, i) => (
-                  <div key={i} className="flex items-center gap-4 py-3 border-b border-border last:border-0">
+                  <div
+                    key={i}
+                    className={`flex items-center gap-4 py-3 border-b border-border last:border-0 ${m.externalId ? "cursor-pointer hover:bg-surface-hover rounded-lg px-2 -mx-2" : ""}`}
+                    onClick={() => {
+                      if (m.externalId) {
+                        router.push(`/media/${m.category}/${m.externalId}`);
+                      }
+                    }}
+                  >
                     <div className="text-lg font-bold text-coral w-8">#{i + 1}</div>
                     {m.coverUrl ? (
                       <img src={m.coverUrl} alt="" className="w-10 h-14 object-cover rounded" />
@@ -403,6 +425,7 @@ function CompareContent() {
                   <div className="space-y-3">
                     {recommendation.from_their_list.map((pick, i) => {
                       const key = `${pick.category}:${pick.title}`;
+                      const status = library.statusLabel(pick.title, pick.category);
                       const added = addedItems.has(key);
                       return (
                         <div key={i} className="flex items-start gap-3">
@@ -416,17 +439,34 @@ function CompareContent() {
                             </div>
                             <p className="text-sm text-muted mt-0.5">{pick.reason}</p>
                           </div>
-                          <button
-                            onClick={() => addToToConsume(pick.title, pick.category, "")}
-                            disabled={added}
-                            className={`flex-shrink-0 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                              added
-                                ? "bg-surface-hover text-muted-light"
-                                : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
-                            }`}
-                          >
-                            {added ? "In Up Next" : "+ Up Next"}
-                          </button>
+                          <div className="flex-shrink-0 flex gap-1.5">
+                            {status ? (
+                              <span className="px-3 py-1 text-xs text-muted-light bg-surface-hover rounded-lg border border-border">
+                                {status}
+                              </span>
+                            ) : added ? (
+                              <span className="px-3 py-1 text-xs text-muted-light bg-surface-hover rounded-lg">
+                                Added
+                              </span>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => addToTrove(pick.title, pick.category, "")}
+                                  disabled={savingRec === key + ":trove"}
+                                  className="px-3 py-1 rounded-lg text-xs font-medium transition-colors bg-coral-muted text-coral hover:bg-coral hover:text-white"
+                                >
+                                  + Trove
+                                </button>
+                                <button
+                                  onClick={() => addToUpNext(pick.title, pick.category, "")}
+                                  disabled={savingRec === key + ":upnext"}
+                                  className="px-3 py-1 rounded-lg text-xs font-medium transition-colors bg-coral-muted text-coral hover:bg-coral hover:text-white"
+                                >
+                                  + Up Next
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -443,6 +483,7 @@ function CompareContent() {
                   <div className="space-y-3">
                     {recommendation.new_picks.map((pick, i) => {
                       const key = `${pick.category}:${pick.title}`;
+                      const status = library.statusLabel(pick.title, pick.category);
                       const added = addedItems.has(key);
                       return (
                         <div key={i} className="flex items-start gap-3">
@@ -457,17 +498,34 @@ function CompareContent() {
                             </div>
                             <p className="text-sm text-muted mt-0.5">{pick.reason}</p>
                           </div>
-                          <button
-                            onClick={() => addToToConsume(pick.title, pick.category, pick.creator || "")}
-                            disabled={added}
-                            className={`flex-shrink-0 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                              added
-                                ? "bg-surface-hover text-muted-light"
-                                : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
-                            }`}
-                          >
-                            {added ? "In Up Next" : "+ Up Next"}
-                          </button>
+                          <div className="flex-shrink-0 flex gap-1.5">
+                            {status ? (
+                              <span className="px-3 py-1 text-xs text-muted-light bg-surface-hover rounded-lg border border-border">
+                                {status}
+                              </span>
+                            ) : added ? (
+                              <span className="px-3 py-1 text-xs text-muted-light bg-surface-hover rounded-lg">
+                                Added
+                              </span>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => addToTrove(pick.title, pick.category, pick.creator || "")}
+                                  disabled={savingRec === key + ":trove"}
+                                  className="px-3 py-1 rounded-lg text-xs font-medium transition-colors bg-coral-muted text-coral hover:bg-coral hover:text-white"
+                                >
+                                  + Trove
+                                </button>
+                                <button
+                                  onClick={() => addToUpNext(pick.title, pick.category, pick.creator || "")}
+                                  disabled={savingRec === key + ":upnext"}
+                                  className="px-3 py-1 rounded-lg text-xs font-medium transition-colors bg-coral-muted text-coral hover:bg-coral hover:text-white"
+                                >
+                                  + Up Next
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
