@@ -65,7 +65,7 @@ export default function ConversationsPage() {
           {conversations.map((conv, i) => (
             <div
               key={`${conv.item.id}-${conv.otherPerson.id}`}
-              onClick={() => router.push(`/item/${conv.item.id}`)}
+              onClick={() => router.push(`/item/${conv.item.id}?friend=${conv.otherPerson.id}`)}
               className="bg-surface rounded-xl border border-border p-4 hover:border-coral/30 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-4">

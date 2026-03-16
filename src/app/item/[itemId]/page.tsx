@@ -1,8 +1,8 @@
 "use client";
 
 import { useAuth } from "@/components/AuthContext";
-import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useEffect, useState, useCallback, Suspense } from "react";
 
 interface Author {
   id: string;
@@ -41,18 +41,19 @@ interface Friend {
   display_name: string;
 }
 
-export default function ThreadPage() {
+function ThreadContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const itemId = params.itemId as string;
+  const friendId = searchParams.get("friend");
 
   const [item, setItem] = useState<ItemDetail | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
-  const [showFriendPicker, setShowFriendPicker] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [sending, setSending] = useState(false);
 
@@ -71,27 +72,32 @@ export default function ThreadPage() {
     ]);
 
     setItem(itemData.item || null);
-    setMessages(messagesData.messages || []);
+
+    // Filter messages to only those involving the specific friend
+    let msgs: Message[] = messagesData.messages || [];
+    if (friendId && user) {
+      msgs = msgs.filter((m) => {
+        // Messages I sent to this friend
+        if (m.author.id === user.id && m.recipients.some((r) => r.id === friendId)) return true;
+        // Messages this friend sent to me
+        if (m.author.id === friendId) return true;
+        return false;
+      });
+    }
+
+    setMessages(msgs);
     setFriends(friendsData.friends || []);
 
-    // Default recipients to the last message's recipients if any
-    const msgs = messagesData.messages || [];
-    if (msgs.length > 0) {
+    // Default recipient to the friend from the URL param
+    if (friendId) {
+      setSelectedRecipients([friendId]);
+    } else if (msgs.length > 0) {
       const lastMsg = msgs[msgs.length - 1];
-      const lastRecipientIds = lastMsg.recipients.map((r: Recipient) => r.id);
-      // If I was a recipient, add the author instead
-      const defaultIds = new Set<string>();
-      for (const rid of lastRecipientIds) {
-        if (rid !== itemData.item?.owner?.id) defaultIds.add(rid);
-      }
-      if (lastMsg.author.id !== messagesData.currentUserId) {
-        defaultIds.add(lastMsg.author.id);
-      }
-      setSelectedRecipients(Array.from(defaultIds));
+      setSelectedRecipients(lastMsg.recipients.map((r) => r.id));
     }
 
     setLoadingData(false);
-  }, [itemId]);
+  }, [itemId, friendId, user]);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
@@ -140,11 +146,13 @@ export default function ThreadPage() {
 
   const categoryLabel = item?.category === "book" ? "Book" : item?.category === "film" ? "Film" : "TV Show";
 
+  // Find the friend name for the header
+  const friendProfile = friendId ? friends.find((f) => f.id === friendId) : null;
+
   if (loading || !user) return null;
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-8">
-      {/* Back button */}
       <button
         onClick={() => router.back()}
         className="text-sm text-muted hover:text-foreground mb-6 flex items-center gap-1"
@@ -179,6 +187,11 @@ export default function ThreadPage() {
                     {item.owner.display_name || item.owner.username}&apos;s shelf
                   </span>
                 </div>
+                {friendProfile && (
+                  <p className="text-xs text-muted mt-1">
+                    Conversation with {friendProfile.display_name || friendProfile.username}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -207,12 +220,6 @@ export default function ThreadPage() {
                         <span>{m.author.display_name || m.author.username}</span>
                         <span>&middot;</span>
                         <span>{timeAgo(m.created_at)}</span>
-                        {m.recipients.length > 0 && (
-                          <>
-                            <span>&middot;</span>
-                            <span>to {m.recipients.map((r) => r.display_name || r.username).join(", ")}</span>
-                          </>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -268,5 +275,13 @@ export default function ThreadPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function ThreadPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-muted">Loading...</div>}>
+      <ThreadContent />
+    </Suspense>
   );
 }

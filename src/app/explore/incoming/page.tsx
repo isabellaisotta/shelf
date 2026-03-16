@@ -17,7 +17,7 @@ interface IncomingMessage {
   id: string;
   body: string;
   created_at: string;
-  author: { username: string; display_name: string };
+  author: { id: string; username: string; display_name: string };
   item: { id: string; title: string; category: string; cover_url: string };
 }
 
@@ -183,7 +183,7 @@ export default function IncomingPage() {
                 {messages.map((m) => (
                   <div
                     key={m.id}
-                    onClick={() => router.push(`/item/${m.item.id}`)}
+                    onClick={() => router.push(`/item/${m.item.id}?friend=${m.author.id}`)}
                     className="bg-surface rounded-xl border border-border p-4 hover:border-coral/30 transition-colors cursor-pointer"
                   >
                     <div className="flex items-start gap-3">

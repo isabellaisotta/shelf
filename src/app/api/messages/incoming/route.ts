@@ -54,7 +54,7 @@ export async function GET() {
       id: m.id,
       body: m.body,
       created_at: m.created_at,
-      author: { username: author?.username || "unknown", display_name: author?.display_name || "Unknown" },
+      author: { id: m.author_id, username: author?.username || "unknown", display_name: author?.display_name || "Unknown" },
       item: item || { id: m.item_id, title: "Unknown", category: "book", cover_url: "" },
     };
   });
