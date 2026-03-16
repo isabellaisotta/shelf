@@ -301,7 +301,7 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
                     : "bg-coral-muted text-coral hover:bg-coral hover:text-white opacity-0 group-hover:opacity-100"
                 }`}
               >
-                {addedItems?.has(item.id) ? "Saved" : "+ Save"}
+                {addedItems?.has(item.id) ? "In Trove" : "+ Trove"}
               </button>
             )}
             <div
@@ -359,7 +359,7 @@ export default function ItemGrid({ items, category, editable = false, onDelete, 
                 <>
                   <h3 className="font-semibold text-foreground mb-2">They already have this!</h3>
                   <p className="text-sm text-muted mb-4">
-                    {alreadyHasItem.friendName} already has <span className="font-medium text-foreground">{recommendItem.title}</span> on their shelf. Want to chat about it instead?
+                    {alreadyHasItem.friendName} already has <span className="font-medium text-foreground">{recommendItem.title}</span> in their Trove. Want to chat about it instead?
                   </p>
                   <div className="flex gap-2">
                     <button

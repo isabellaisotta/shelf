@@ -161,7 +161,11 @@ export async function GET(
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
 
   const { category, externalId } = await params;
-  const externalIdStr = externalId.join("/");
+  // For books, external_id is stored with leading slash (e.g. /works/OL123W)
+  // The catch-all splits it into ["works", "OL123W"], so we rejoin with leading slash
+  const externalIdStr = category === "book"
+    ? "/" + externalId.join("/")
+    : externalId.join("/");
 
   // Fetch media detail from external API
   let detail: MediaDetail | null = null;
@@ -173,9 +177,7 @@ export async function GET(
     const tmdbId = externalIdStr.replace("tmdb:", "");
     detail = await fetchTVDetail(tmdbId);
   } else if (category === "book") {
-    // externalId comes as ["works", "OL123W"] from the catch-all
-    const workPath = "/" + externalIdStr;
-    detail = await fetchBookDetail(workPath);
+    detail = await fetchBookDetail(externalIdStr);
   }
 
   if (!detail) {

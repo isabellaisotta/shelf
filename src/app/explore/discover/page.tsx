@@ -77,7 +77,7 @@ export default function DiscoverPage() {
       }),
     });
     if (res.ok) {
-      setToast(`Added "${result.title}" to To Consume`);
+      setToast(`Added "${result.title}" to Up Next`);
       setTimeout(() => setToast(null), 3000);
     } else {
       const data = await res.json();
@@ -119,7 +119,7 @@ export default function DiscoverPage() {
       }),
     });
     if (res.ok) {
-      setToast(`Added "${pick.title}" to To Consume`);
+      setToast(`Added "${pick.title}" to Up Next`);
     } else {
       const data = await res.json();
       setToast(data.error || "Failed to save");
@@ -144,12 +144,12 @@ export default function DiscoverPage() {
       }),
     });
     if (res.ok) {
-      setToast(`Added "${item.title}" to your shelf`);
+      setToast(`Added "${item.title}" to your Trove`);
       setSavedActivity((prev) => new Set(prev).add(key));
     } else {
       const data = await res.json();
       if (data.error?.includes("duplicate") || res.status === 409) {
-        setToast("Already on your shelf");
+        setToast("Already in your Trove");
         setSavedActivity((prev) => new Set(prev).add(key));
       } else {
         setToast(data.error || "Failed to add");
@@ -210,7 +210,7 @@ export default function DiscoverPage() {
         </div>
         <MediaSearch category={searchCategory} onSelect={handleSearchSelect} />
         <p className="text-xs text-muted-light mt-2">
-          Search and select to add to To Consume
+          Search and select to add to Up Next
         </p>
       </div>
 
@@ -268,7 +268,7 @@ export default function DiscoverPage() {
                     disabled={savingPick === `${pick.title}|${pick.category}`}
                     className="px-3 py-1.5 text-xs text-coral hover:bg-coral hover:text-white rounded-lg transition-colors border border-coral/30 opacity-0 group-hover:opacity-100"
                   >
-                    + Save
+                    + Up Next
                   </button>
                 </div>
               ))}
@@ -278,7 +278,7 @@ export default function DiscoverPage() {
           <div className="text-center py-8 text-muted">
             <p className="text-sm mb-1">No recommendations yet</p>
             <p className="text-xs text-muted-light">
-              Hit Generate to get personalised picks based on your shelf
+              Hit Generate to get personalised picks based in your Trove
             </p>
           </div>
         )}
@@ -344,7 +344,7 @@ export default function DiscoverPage() {
                         : "text-coral hover:bg-coral hover:text-white border-coral/30 opacity-0 group-hover:opacity-100"
                     }`}
                   >
-                    {savedActivity.has(`${item.title}|${item.category}`) ? "Saved" : "+ Save"}
+                    {savedActivity.has(`${item.title}|${item.category}`) ? "In Trove" : "+ Trove"}
                   </button>
                 </div>
               </div>

@@ -184,7 +184,7 @@ function ThreadContent() {
                     {categoryLabel}
                   </span>
                   <span className="text-xs text-muted-light">
-                    {item.owner.display_name || item.owner.username}&apos;s shelf
+                    {item.owner.display_name || item.owner.username}&apos;s Trove
                   </span>
                 </div>
                 {friendProfile && (

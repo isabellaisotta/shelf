@@ -64,6 +64,25 @@ export default function ToConsumePage() {
     setItems((prev) => prev.filter((i) => i.id !== id));
   }
 
+  const [movingToTrove, setMovingToTrove] = useState<string | null>(null);
+
+  async function moveToTrove(item: RecommendedItem) {
+    setMovingToTrove(item.id);
+    const res = await fetch("/api/items", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        category: item.category,
+        title: item.title,
+        creator: item.creator,
+      }),
+    });
+    if (res.ok) {
+      await removeItem(item.id, item.table);
+    }
+    setMovingToTrove(null);
+  }
+
   if (loading || !user) return null;
 
   const tabs: { key: Category; label: string }[] = [
@@ -125,7 +144,7 @@ export default function ToConsumePage() {
       <div className="bg-surface rounded-xl border border-border p-6 mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">To Consume</h1>
+            <h1 className="text-2xl font-bold text-foreground">Up Next</h1>
             <p className="text-sm text-muted mt-1">Things to watch, read, and binge</p>
           </div>
           <div className="flex gap-6 text-center">
@@ -187,7 +206,7 @@ export default function ToConsumePage() {
           </div>
           <MediaSearch category={addCategory} onSelect={addItem} />
           <p className="text-xs text-muted-light mt-2">
-            Search and select to add to To Consume
+            Search and select to add to Up Next
           </p>
         </div>
       )}
@@ -269,12 +288,21 @@ export default function ToConsumePage() {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => removeItem(item.id, item.table)}
-                  className="px-3 py-1.5 text-xs text-muted-light hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  Remove
-                </button>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100">
+                  <button
+                    onClick={() => moveToTrove(item)}
+                    disabled={movingToTrove === item.id}
+                    className="px-3 py-1.5 text-xs text-coral hover:bg-coral hover:text-white rounded-lg transition-colors border border-coral/30"
+                  >
+                    {movingToTrove === item.id ? "Moving..." : "→ Trove"}
+                  </button>
+                  <button
+                    onClick={() => removeItem(item.id, item.table)}
+                    className="px-3 py-1.5 text-xs text-muted-light hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             </div>
           ))}

@@ -5,8 +5,8 @@ export default function TroveLayout({ children }: { children: React.ReactNode })
     <>
       <SubNav
         items={[
-          { label: "Consumed", href: "/trove/consumed" },
-          { label: "To Consume", href: "/trove/to-consume" },
+          { label: "Trove", href: "/trove/consumed" },
+          { label: "Up Next", href: "/trove/to-consume" },
         ]}
         defaultHref="/trove/consumed"
       />

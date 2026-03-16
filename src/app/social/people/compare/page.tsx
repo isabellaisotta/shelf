@@ -425,7 +425,7 @@ function CompareContent() {
                                 : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
                             }`}
                           >
-                            {added ? "Saved" : "+ Save"}
+                            {added ? "In Up Next" : "+ Up Next"}
                           </button>
                         </div>
                       );
@@ -466,7 +466,7 @@ function CompareContent() {
                                 : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
                             }`}
                           >
-                            {added ? "Saved" : "+ Save"}
+                            {added ? "In Up Next" : "+ Up Next"}
                           </button>
                         </div>
                       );

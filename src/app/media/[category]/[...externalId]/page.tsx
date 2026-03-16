@@ -62,7 +62,10 @@ export default function MediaPage() {
 
   const category = params.category as string;
   const externalIdParts = params.externalId as string[];
-  const externalIdStr = externalIdParts.join("/");
+  // Books have external_id with leading slash (e.g. /works/OL123W) stored in DB
+  const externalIdStr = category === "book"
+    ? "/" + externalIdParts.join("/")
+    : externalIdParts.join("/");
 
   const [detail, setDetail] = useState<MediaDetail | null>(null);
   const [social, setSocial] = useState<SocialData | null>(null);
@@ -124,12 +127,12 @@ export default function MediaPage() {
         }),
       });
       if (res.ok) {
-        showToast("Added to your shelf");
+        showToast("Added to your Trove");
         loadData();
       } else {
         const data = await res.json();
         if (data.error?.includes("duplicate") || res.status === 409) {
-          showToast("Already on your shelf");
+          showToast("Already in your Trove");
         } else {
           showToast("Failed to add");
         }
@@ -156,7 +159,7 @@ export default function MediaPage() {
         }),
       });
       if (res.ok) {
-        showToast("Added to To Consume");
+        showToast("Added to Up Next");
         loadData();
       } else if (res.status === 409) {
         showToast("Already on your list");
@@ -377,7 +380,7 @@ export default function MediaPage() {
           <div className="mb-3">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs px-3 py-1.5 rounded-full bg-coral text-white font-medium">
-                On your shelf, ranked #{social.myItem.rank}
+                In your Trove, ranked #{social.myItem.rank}
               </span>
             </div>
             <button
@@ -393,7 +396,7 @@ export default function MediaPage() {
         ) : social?.onToConsume ? (
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xs px-3 py-1.5 rounded-full bg-surface-hover text-muted border border-border font-medium">
-              On your To Consume list
+              On your Up Next list
             </span>
           </div>
         ) : (
@@ -403,14 +406,14 @@ export default function MediaPage() {
               disabled={adding}
               className="px-4 py-2 bg-coral text-white rounded-lg text-sm font-medium hover:bg-coral-hover disabled:opacity-50 transition-colors"
             >
-              {adding ? "Adding..." : "Add to Consumed"}
+              {adding ? "Adding..." : "Add to Trove"}
             </button>
             <button
               onClick={addToConsume}
               disabled={addingToConsume}
               className="px-4 py-2 bg-surface-hover text-muted rounded-lg text-sm border border-border hover:text-foreground disabled:opacity-50 transition-colors"
             >
-              {addingToConsume ? "Adding..." : "Add to To Consume"}
+              {addingToConsume ? "Adding..." : "Add to Up Next"}
             </button>
           </div>
         )}

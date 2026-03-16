@@ -141,7 +141,7 @@ export default function ConsumedPage() {
         <div className="bg-surface rounded-xl border border-border p-4 mb-6">
           <MediaSearch category={activeTab} onSelect={addItem} />
           <p className="text-xs text-muted-light mt-2">
-            Search and select to add to your {activeTab === "tv" ? "TV shows" : activeTab + "s"}
+            Search and select to add to your Trove
           </p>
         </div>
       )}
