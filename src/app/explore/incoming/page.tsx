@@ -1,0 +1,272 @@
+"use client";
+
+import { useAuth } from "@/components/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
+
+interface PendingRec {
+  id: string;
+  category: string;
+  title: string;
+  creator: string;
+  source: string;
+  status: string;
+}
+
+interface IncomingComment {
+  id: string;
+  body: string;
+  created_at: string;
+  friend: { username: string; display_name: string };
+  item: { id: string; title: string; category: string };
+}
+
+interface Nudge {
+  title: string;
+  creator: string;
+  category: string;
+  cover_url: string;
+  reason: string;
+  friends: { username: string; display_name: string }[];
+}
+
+export default function IncomingPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const [pendingRecs, setPendingRecs] = useState<PendingRec[]>([]);
+  const [comments, setComments] = useState<IncomingComment[]>([]);
+  const [nudges, setNudges] = useState<Nudge[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+
+  const loadData = useCallback(async () => {
+    setLoadingData(true);
+    const [recsRes, commentsRes, nudgesRes] = await Promise.all([
+      fetch("/api/recommended"),
+      fetch("/api/incoming/comments"),
+      fetch("/api/incoming/nudges"),
+    ]);
+
+    const [recsData, commentsData, nudgesData] = await Promise.all([
+      recsRes.json(),
+      commentsRes.json(),
+      nudgesRes.json(),
+    ]);
+
+    // Filter to only pending friend recs
+    const pending = (recsData.items || []).filter(
+      (i: PendingRec) => i.source.startsWith("Recommended by") && i.status === "pending"
+    );
+    setPendingRecs(pending);
+    setComments(commentsData.comments || []);
+    setNudges(nudgesData.nudges || []);
+    setLoadingData(false);
+  }, []);
+
+  useEffect(() => {
+    if (!loading && !user) router.push("/login");
+    if (user) loadData();
+  }, [user, loading, router, loadData]);
+
+  async function acceptRec(id: string) {
+    await fetch("/api/recommended", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, table: "friend_recommendations", status: "accepted" }),
+    });
+    setPendingRecs((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  async function declineRec(id: string) {
+    await fetch("/api/recommended", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, table: "friend_recommendations", status: "declined" }),
+    });
+    setPendingRecs((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  if (loading || !user) return null;
+
+  const totalPending = pendingRecs.length;
+  const isEmpty = pendingRecs.length === 0 && comments.length === 0 && nudges.length === 0;
+
+  function categoryBadge(category: string) {
+    return category === "book" ? "BK" : category === "film" ? "FM" : "TV";
+  }
+
+  function timeAgo(dateStr: string) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  }
+
+  return (
+    <div className="max-w-5xl mx-auto px-6 py-8">
+      {/* Header */}
+      <div className="bg-surface rounded-xl border border-border p-6 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Incoming</h1>
+            <p className="text-sm text-muted mt-1">Things that need your attention</p>
+          </div>
+          {totalPending > 0 && (
+            <div className="text-center">
+              <div className="text-2xl font-bold text-coral">{totalPending}</div>
+              <div className="text-xs text-muted">pending</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {loadingData ? (
+        <div className="text-center py-16 text-muted">Loading...</div>
+      ) : isEmpty ? (
+        <div className="text-center py-16 text-muted">
+          <p className="text-lg mb-2">All caught up!</p>
+          <p className="text-sm text-muted-light">Nothing new right now.</p>
+        </div>
+      ) : (
+        <>
+          {/* Pending Friend Recs */}
+          {pendingRecs.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-sm font-medium text-muted uppercase tracking-wide mb-3">
+                Friend Recommendations
+              </h2>
+              <div className="bg-surface rounded-xl border border-coral/30 p-4 space-y-3">
+                {pendingRecs.map((rec) => (
+                  <div key={rec.id} className="flex items-center gap-4 py-2">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-coral-muted flex items-center justify-center">
+                      <span className="text-coral text-xs font-bold uppercase">
+                        {categoryBadge(rec.category)}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-foreground">{rec.title}</div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {rec.creator && <span className="text-sm text-muted">{rec.creator}</span>}
+                        {rec.creator && <span className="text-muted-light">·</span>}
+                        <span className="text-xs text-coral">{rec.source}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => acceptRec(rec.id)}
+                        className="px-4 py-1.5 bg-coral text-white rounded-lg text-sm hover:bg-coral-hover"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => declineRec(rec.id)}
+                        className="px-4 py-1.5 bg-surface-hover text-muted rounded-lg text-sm border border-border hover:text-foreground"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* AI Nudges */}
+          {nudges.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-sm font-medium text-muted uppercase tracking-wide mb-3">
+                Friends who share your taste also liked...
+              </h2>
+              <div className="space-y-2">
+                {nudges.map((nudge, i) => (
+                  <div
+                    key={i}
+                    className="bg-surface rounded-xl border border-border p-4 hover:border-coral/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      {nudge.cover_url ? (
+                        <img
+                          src={nudge.cover_url}
+                          alt=""
+                          className="w-10 h-14 object-cover rounded flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-coral-muted flex items-center justify-center">
+                          <span className="text-coral text-xs font-bold uppercase">
+                            {categoryBadge(nudge.category)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-foreground">{nudge.title}</div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {nudge.creator && (
+                            <span className="text-sm text-muted">{nudge.creator}</span>
+                          )}
+                          {nudge.creator && <span className="text-muted-light">·</span>}
+                          <span className="text-xs text-muted-light capitalize">{nudge.category}</span>
+                        </div>
+                        <p className="text-xs text-coral mt-1">{nudge.reason}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Comments on Your Items */}
+          {comments.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-sm font-medium text-muted uppercase tracking-wide mb-3">
+                Comments on Your Items
+              </h2>
+              <div className="space-y-2">
+                {comments.map((c) => (
+                  <div
+                    key={c.id}
+                    className="bg-surface rounded-xl border border-border p-4 hover:border-coral/30 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-coral-muted flex items-center justify-center">
+                        <span className="text-coral text-xs font-bold">
+                          {(c.friend.display_name || c.friend.username)[0].toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-foreground text-sm">
+                            {c.friend.display_name || c.friend.username}
+                          </span>
+                          <span className="text-muted-light text-xs">commented on</span>
+                          <span className="text-coral text-sm font-medium">{c.item.title}</span>
+                          <span className="text-muted-light text-xs">{timeAgo(c.created_at)}</span>
+                        </div>
+                        <p className="text-sm text-muted mt-1">{c.body}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Group Picks placeholder */}
+          <div className="mb-6">
+            <h2 className="text-sm font-medium text-muted uppercase tracking-wide mb-3">
+              Group Picks
+            </h2>
+            <div className="bg-surface rounded-xl border border-border/50 p-6 text-center">
+              <p className="text-muted text-sm">Group recommendations are coming soon.</p>
+              <p className="text-muted-light text-xs mt-1">
+                Create groups with friends to get collective picks.
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

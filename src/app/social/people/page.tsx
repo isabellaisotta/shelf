@@ -18,7 +18,7 @@ interface FriendRequest {
   display_name: string;
 }
 
-export default function FriendsPage() {
+export default function PeoplePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -162,7 +162,7 @@ export default function FriendsPage() {
             {friends.map((friend) => (
               <Link
                 key={friend.id}
-                href={`/match?friendId=${friend.id}`}
+                href={`/social/people/compare?friendId=${friend.id}`}
                 className="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-surface-hover transition-colors"
               >
                 <div>

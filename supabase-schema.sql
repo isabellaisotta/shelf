@@ -80,6 +80,14 @@ create table public.match_recommendations (
   unique(user_id, friend_id)
 );
 
+-- Personal AI recommendations (cached per user)
+create table public.personal_recommendations (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null unique,
+  recommendation jsonb not null,
+  created_at timestamptz default now()
+);
+
 -- Indexes
 create index idx_recommended_user on public.recommended(user_id);
 create index idx_match_recs_user on public.match_recommendations(user_id, friend_id);
@@ -90,6 +98,8 @@ create index idx_comments_item on public.comments(item_id);
 create index idx_friend_recs_to on public.friend_recommendations(to_user_id);
 create index idx_friend_recs_from on public.friend_recommendations(from_user_id);
 
+create index idx_personal_recs_user on public.personal_recommendations(user_id);
+
 -- Row Level Security
 alter table public.profiles enable row level security;
 alter table public.items enable row level security;
@@ -97,6 +107,7 @@ alter table public.friendships enable row level security;
 alter table public.recommended enable row level security;
 alter table public.match_recommendations enable row level security;
 alter table public.friend_recommendations enable row level security;
+alter table public.personal_recommendations enable row level security;
 alter table public.comments enable row level security;
 
 -- Profiles: anyone can read, only own profile can update
@@ -152,6 +163,10 @@ create policy "Recipient can update rec status" on public.friend_recommendations
   for update using (auth.uid() = to_user_id);
 create policy "Recipient can delete recs" on public.friend_recommendations
   for delete using (auth.uid() = to_user_id);
+
+-- Personal recommendations: only owner can manage
+create policy "Users can manage own personal recs" on public.personal_recommendations
+  for all using (auth.uid() = user_id);
 
 -- Comments: anyone can read (on items they can see), logged-in users can post
 create policy "Comments are viewable by everyone" on public.comments

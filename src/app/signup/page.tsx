@@ -34,7 +34,7 @@ export default function SignupPage() {
     }
 
     await refresh();
-    router.push("/profile");
+    router.push("/trove");
   }
 
   return (

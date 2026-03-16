@@ -20,7 +20,7 @@ interface RecommendedItem {
 
 type Category = "all" | "book" | "film" | "tv";
 
-export default function RecommendedPage() {
+export default function ToConsumePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [items, setItems] = useState<RecommendedItem[]>([]);
@@ -64,24 +64,6 @@ export default function RecommendedPage() {
     setItems((prev) => prev.filter((i) => i.id !== id));
   }
 
-  async function acceptRec(id: string) {
-    await fetch("/api/recommended", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, table: "friend_recommendations", status: "accepted" }),
-    });
-    setItems((prev) => prev.map((i) => i.id === id ? { ...i, status: "accepted" } : i));
-  }
-
-  async function declineRec(id: string) {
-    await fetch("/api/recommended", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, table: "friend_recommendations", status: "declined" }),
-    });
-    setItems((prev) => prev.filter((i) => i.id !== id));
-  }
-
   if (loading || !user) return null;
 
   const tabs: { key: Category; label: string }[] = [
@@ -91,10 +73,8 @@ export default function RecommendedPage() {
     { key: "tv", label: "TV Shows" },
   ];
 
-  const pendingRecs = items.filter((i) => i.source_type === "friend" && i.status === "pending");
   const nonPending = items.filter((i) => !(i.source_type === "friend" && i.status === "pending"));
   const filtered = activeTab === "all" ? nonPending : nonPending.filter((i) => i.category === activeTab);
-  const filteredPending = activeTab === "all" ? pendingRecs : pendingRecs.filter((i) => i.category === activeTab);
 
   const counts = {
     all: items.length,
@@ -145,7 +125,7 @@ export default function RecommendedPage() {
       <div className="bg-surface rounded-xl border border-border p-6 mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Recommended</h1>
+            <h1 className="text-2xl font-bold text-foreground">To Consume</h1>
             <p className="text-sm text-muted mt-1">Things to watch, read, and binge</p>
           </div>
           <div className="flex gap-6 text-center">
@@ -207,55 +187,15 @@ export default function RecommendedPage() {
           </div>
           <MediaSearch category={addCategory} onSelect={addItem} />
           <p className="text-xs text-muted-light mt-2">
-            Search and select to add to Recommended
+            Search and select to add to To Consume
           </p>
         </div>
       )}
 
-      {/* Pending friend recommendations */}
-      {filteredPending.length > 0 && (
-        <div className="bg-surface rounded-xl border border-coral/30 p-6 mb-6">
-          <h2 className="font-medium text-foreground mb-3">Pending recommendations</h2>
-          <div className="space-y-3">
-            {filteredPending.map((item) => (
-              <div key={item.id} className="flex items-center gap-4 py-2">
-                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-coral-muted flex items-center justify-center">
-                  <span className="text-coral text-xs font-bold uppercase">
-                    {item.category === "book" ? "BK" : item.category === "film" ? "FM" : "TV"}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-foreground">{item.title}</div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {item.creator && <span className="text-sm text-muted">{item.creator}</span>}
-                    {item.creator && <span className="text-muted-light">·</span>}
-                    <span className="text-xs text-coral">{sourceLabel(item)}</span>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => acceptRec(item.id)}
-                    className="px-4 py-1.5 bg-coral text-white rounded-lg text-sm hover:bg-coral-hover"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => declineRec(item.id)}
-                    className="px-4 py-1.5 bg-surface-hover text-muted rounded-lg text-sm border border-border hover:text-foreground"
-                  >
-                    Decline
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Items */}
-      {filtered.length === 0 && filteredPending.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="text-center py-16 text-muted">
-          <p className="text-lg mb-2">No recommendations yet</p>
+          <p className="text-lg mb-2">No items yet</p>
           <p className="text-sm text-muted-light">
             Add your own, get AI picks from taste comparisons, or have friends recommend things to you
           </p>

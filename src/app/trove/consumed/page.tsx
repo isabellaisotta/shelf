@@ -19,7 +19,7 @@ interface Item {
 
 type Category = "book" | "film" | "tv";
 
-export default function ProfilePage() {
+export default function ConsumedPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [items, setItems] = useState<Item[]>([]);

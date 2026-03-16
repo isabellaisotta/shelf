@@ -48,7 +48,7 @@ function CategoryLabel({ category }: { category: string }) {
   );
 }
 
-function MatchContent() {
+function CompareContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -96,7 +96,7 @@ function MatchContent() {
     }
   }, [user, loading, router, friendId, loadMatch, loadSavedRec]);
 
-  async function addToRecommended(title: string, category: string, creator: string, source?: string) {
+  async function addToToConsume(title: string, category: string, creator: string, source?: string) {
     const key = `${category}:${title}`;
     if (addedItems.has(key)) return;
     try {
@@ -133,7 +133,7 @@ function MatchContent() {
           category: item.category,
           title: item.title,
           creator: item.creator,
-          source: `From ${friendName}'s shelf`,
+          source: `From ${friendName}'s trove`,
         }),
       });
       if (res.ok || res.status === 409) {
@@ -196,6 +196,14 @@ function MatchContent() {
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
+      {/* Back link */}
+      <a
+        href="/social/people"
+        className="inline-block text-sm text-muted hover:text-foreground mb-4 transition-colors"
+      >
+        &larr; Back to friends
+      </a>
+
       {/* Header */}
       <div className="bg-surface rounded-xl border border-border p-6 mb-6">
         <div className="flex items-start justify-between">
@@ -239,7 +247,7 @@ function MatchContent() {
             activeTab === "shelf" ? "bg-coral text-white" : "bg-surface text-muted border border-border hover:text-foreground"
           }`}
         >
-          {friendName}&apos;s Shelf
+          {friendName}&apos;s Trove
         </button>
         <button
           onClick={() => setActiveTab("recs")}
@@ -290,7 +298,7 @@ function MatchContent() {
         </>
       )}
 
-      {/* Friend's shelf view */}
+      {/* Friend's trove view */}
       {activeTab === "shelf" && (
         <div>
           <div className="flex gap-2 mb-4">
@@ -390,7 +398,7 @@ function MatchContent() {
               {recommendation.from_their_list.length > 0 && (
                 <div className="bg-surface rounded-xl border border-border p-5">
                   <h3 className="text-sm font-semibold text-coral uppercase tracking-wider mb-4">
-                    Try from {friendName}&apos;s shelf
+                    Try from {friendName}&apos;s trove
                   </h3>
                   <div className="space-y-3">
                     {recommendation.from_their_list.map((pick, i) => {
@@ -409,7 +417,7 @@ function MatchContent() {
                             <p className="text-sm text-muted mt-0.5">{pick.reason}</p>
                           </div>
                           <button
-                            onClick={() => addToRecommended(pick.title, pick.category, "")}
+                            onClick={() => addToToConsume(pick.title, pick.category, "")}
                             disabled={added}
                             className={`flex-shrink-0 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
                               added
@@ -417,7 +425,7 @@ function MatchContent() {
                                 : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
                             }`}
                           >
-                            {added ? "Added to Recommended" : "+ Add to Recommended"}
+                            {added ? "Saved" : "+ Save"}
                           </button>
                         </div>
                       );
@@ -450,7 +458,7 @@ function MatchContent() {
                             <p className="text-sm text-muted mt-0.5">{pick.reason}</p>
                           </div>
                           <button
-                            onClick={() => addToRecommended(pick.title, pick.category, pick.creator || "")}
+                            onClick={() => addToToConsume(pick.title, pick.category, pick.creator || "")}
                             disabled={added}
                             className={`flex-shrink-0 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
                               added
@@ -458,7 +466,7 @@ function MatchContent() {
                                 : "bg-coral-muted text-coral hover:bg-coral hover:text-white"
                             }`}
                           >
-                            {added ? "Added to Recommended" : "+ Add to Recommended"}
+                            {added ? "Saved" : "+ Save"}
                           </button>
                         </div>
                       );
@@ -519,10 +527,10 @@ function MatchContent() {
   );
 }
 
-export default function MatchPage() {
+export default function ComparePage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-muted">Loading...</div>}>
-      <MatchContent />
+      <CompareContent />
     </Suspense>
   );
 }

@@ -33,7 +33,7 @@ export default function LoginPage() {
     }
 
     await refresh();
-    router.push("/profile");
+    router.push("/trove");
   }
 
   return (

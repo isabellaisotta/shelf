@@ -11,7 +11,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.push("/profile");
+      router.push("/trove");
     }
   }, [user, loading, router]);
 
@@ -26,7 +26,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center max-w-lg px-6">
-        <img src="/logo.svg" alt="Shelf" className="h-14 mx-auto mb-4" />
+        <img src="/logo.svg" alt="Trove" className="h-14 mx-auto mb-4" />
         <p className="text-lg text-muted mb-10">
           Your taste, ranked. Your friends, compared.
         </p>
