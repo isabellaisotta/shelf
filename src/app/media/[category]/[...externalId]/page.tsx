@@ -374,10 +374,21 @@ export default function MediaPage() {
         </h3>
 
         {social?.myItem ? (
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xs px-3 py-1.5 rounded-full bg-coral text-white font-medium">
-              On your shelf, ranked #{social.myItem.rank}
-            </span>
+          <div className="mb-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs px-3 py-1.5 rounded-full bg-coral text-white font-medium">
+                On your shelf, ranked #{social.myItem.rank}
+              </span>
+            </div>
+            <button
+              onClick={() => router.push(`/item/${social.myItem!.id}`)}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-surface-hover text-muted hover:bg-coral hover:text-white border border-border hover:border-coral transition-all"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              Chat about it
+            </button>
           </div>
         ) : social?.onToConsume ? (
           <div className="flex items-center gap-2 mb-3">
